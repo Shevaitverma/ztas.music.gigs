@@ -1,0 +1,25 @@
+# Bun Configuration - Production Ready
+
+[install]
+# Registry configuration
+registry = "https://registry.npmjs.org"
+
+# Lock dependencies in production
+frozenLockfile = false
+
+[run]
+# Disable hot reload (use --watch flag instead for dev)
+hot = false
+
+[serve]
+# Enable port reuse for clustering
+reusePort = true
+
+[test]
+# Test configuration
+preload = ["./src/test/setup.ts"]
+coverage = true
+
+[define]
+# Compile-time constants
+"process.env.BUILD_TIME" = "true"

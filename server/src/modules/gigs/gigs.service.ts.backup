@@ -1,0 +1,203 @@
+import { GigModel, Gig } from '../../db/models';
+import { NotFoundException, ForbiddenException } from '../../plugins/error.plugin';
+import { GigStatus } from '../../shared/enums';
+import { s3Service } from '../../services/s3.service';
+
+/**
+ * Gigs Service
+ */
+export class GigsService {
+  /**
+   * Create a new Gig
+   */
+  async createGig(userId: string, dto: any): Promise<Gig> {
+    // Calculate duration
+    const start = new Date(`2000-01-01T${dto.eventTiming.startTime}`);
+    const end = new Date(`2000-01-01T${dto.eventTiming.endTime}`);
+    let durationMinutes = (end.getTime() - start.getTime()) / 60000;
+    
+    if (durationMinutes < 0) durationMinutes += 1440; // Handle overnight
+
+    const gig = await GigModel.create({
+      ...dto,
+      eventTiming: {
+        ...dto.eventTiming,
+        durationMinutes,
+      },
+      postedBy: userId,
+      status: GigStatus.LIVE, // Or DRAFT based on logic
+    });
+
+    return gig;
+  }
+
+  /**
+   * Get Gig by ID
+   */
+  async getGig(id: string): Promise<Gig> {
+    const gig = await GigModel.findById(id).populate('postedBy', 'name profilePicture clientProfile').exec();
+    if (!gig) {
+      throw new NotFoundException('Gig not found');
+    }
+    
+    // Increment view count
+    gig.viewCount += 1;
+    gig.save(); // Async, don't await
+    
+    return gig;
+  }
+
+  /**
+   * Update Gig
+   */
+  async updateGig(id: string, userId: string, dto: any): Promise<Gig> {
+    const gig = await GigModel.findById(id).exec();
+    
+    if (!gig) {
+      throw new NotFoundException('Gig not found');
+    }
+    
+    if (gig.postedBy.toString() !== userId) {
+      throw new ForbiddenException('You are not authorized to update this gig');
+    }
+
+    Object.assign(gig, dto);
+    
+    // Recalculate duration if timing changed
+    if (dto.eventTiming) {
+      const start = new Date(`2000-01-01T${gig.eventTiming.startTime}`);
+      const end = new Date(`2000-01-01T${gig.eventTiming.endTime}`);
+      let durationMinutes = (end.getTime() - start.getTime()) / 60000;
+      if (durationMinutes < 0) durationMinutes += 1440;
+      gig.eventTiming.durationMinutes = durationMinutes;
+    }
+
+    await gig.save();
+    return gig;
+  }
+
+  /**
+   * Delete Gig
+   */
+  async deleteGig(id: string, userId: string): Promise<void> {
+    const gig = await GigModel.findById(id).exec();
+    
+    if (!gig) {
+      throw new NotFoundException('Gig not found');
+    }
+    
+    if (gig.postedBy.toString() !== userId) {
+      throw new ForbiddenException('You are not authorized to delete this gig');
+    }
+
+    await gig.deleteOne();
+  }
+
+  /**
+   * Search Gigs
+   */
+  async searchGigs(params: {
+    query?: string;
+    city?: string;
+    category?: string;
+    status?: string;
+    minBudget?: number;
+    maxBudget?: number;
+    date?: string;
+    lat?: number;
+    lng?: number;
+    distance?: number;
+    page: number;
+    limit: number;
+    postedBy?: string;
+  }) {
+    const filter: any = {};
+
+    if (params.status) {
+      filter.status = params.status;
+    } else {
+      filter.status = GigStatus.LIVE; // Default to LIVE gigs
+    }
+
+    if (params.category) filter.category = params.category;
+    if (params.postedBy) filter.postedBy = params.postedBy;
+
+    // Text Search
+    if (params.query) {
+      filter.$text = { $search: params.query };
+    }
+
+    // Filters
+    if (params.city) {
+      filter['venue.city'] = { $regex: params.city, $options: 'i' };
+    }
+
+    if (params.minBudget || params.maxBudget) {
+      filter['budget.max'] = {};
+      if (params.minBudget) filter['budget.max'].$gte = params.minBudget;
+    }
+    
+    // Check if maxBudget overlaps (a bit complex for ranges, simplified here to check if gig max is within range)
+    if (params.maxBudget) {
+       if (!filter['budget.min']) filter['budget.min'] = {};
+       filter['budget.min'].$lte = params.maxBudget;
+    }
+
+    if (params.date) {
+      const searchDate = new Date(params.date);
+      const nextDay = new Date(searchDate);
+      nextDay.setDate(searchDate.getDate() + 1);
+      
+      filter['eventTiming.date'] = {
+        $gte: searchDate,
+        $lt: nextDay
+      };
+    }
+
+    // Geospatial Search (if using 2dsphere on venue coordinates)
+    // Note: Gig model stores coordinates in venue.coordinates. type needs to be GeoJSON for $near
+    // The current Gig model schema has `type: { lat: Number, lng: Number }` which is NOT GeoJSON 2dsphere compatible directly like that.
+    // However, let's check `gig.model.ts` again.
+    // It says: coordinates: { type: { lat: Number, lng: Number } }
+    // This is NOT a Mongo GeoJSON Point. So we can't use $near. We have to filter by city or client logic.
+    // Or we can assume strict City filter is enough for phase 1.
+    // For now, ignoring lat/lng search unless we refactor schema to GeoJSON.
+    
+    const skip = (params.page - 1) * params.limit;
+    const sort = params.query ? { score: { $meta: 'textScore' } } : { createdAt: -1 };
+
+    const [gigs, total] = await Promise.all([
+      GigModel.find(filter)
+        .populate('postedBy', 'name profilePicture')
+        .sort(sort as any)
+        .skip(skip)
+        .limit(params.limit)
+        .exec(),
+      GigModel.countDocuments(filter).exec(),
+    ]);
+
+    return {
+      gigs,
+      total,
+      page: params.page,
+      pages: Math.ceil(total / params.limit),
+    };
+  }
+
+  /**
+   * Upload Gig Image
+   */
+  async uploadGigImage(gigId: string, userId: string, file: any): Promise<string> {
+    const gig = await GigModel.findById(gigId).exec();
+    if (!gig) throw new NotFoundException('Gig not found');
+    if (gig.postedBy.toString() !== userId) throw new ForbiddenException('Not authorized');
+
+    const key = `gigs/${gigId}/${Date.now()}_${file.name}`;
+    const url = await s3Service.uploadFile(await file.arrayBuffer(), key, file.type);
+    
+    gig.images.push(url);
+    await gig.save();
+    
+    return url;
+  }
+}

@@ -235,8 +235,8 @@ export class CheckInService {
     if (checkIn.otpLockedUntil && checkIn.otpLockedUntil > nowTs) {
       const retryMs = checkIn.otpLockedUntil.getTime() - nowTs.getTime();
       throw new HttpException(
-        `Too many failed OTP attempts. Try again in ${Math.ceil(retryMs / 60000)} minute(s).`,
-        429
+        429,
+        `Too many failed OTP attempts. Try again in ${Math.ceil(retryMs / 60000)} minute(s).`
       );
     }
 

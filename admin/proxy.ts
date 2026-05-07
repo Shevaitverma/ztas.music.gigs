@@ -42,7 +42,9 @@ async function checkAuth(request: NextRequest): Promise<MeResult> {
         const body = (await res.json()) as { data?: MeUser } | MeUser
         // Tolerate either a raw user or { success, data: user } envelope.
         const user: MeUser | undefined =
-          body && typeof body === 'object' && 'data' in body ? body.data : (body as MeUser)
+          body && typeof body === 'object' && 'data' in body
+            ? (body.data as MeUser | undefined)
+            : (body as MeUser)
         if (user?.role === 'admin') return { status: 'authed-admin' }
         return { status: 'authed-not-admin' }
       } catch {

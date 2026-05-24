@@ -62,6 +62,16 @@ export default function ReportDetailPage() {
       setResolveOpen(false)
       qc.invalidateQueries({ queryKey: reportsQueryKeys.lists() })
       if (id) qc.invalidateQueries({ queryKey: reportsQueryKeys.detail(id) })
+      // Sibling reports against the same target need a refresh too — their
+      // status pills are derived from the entity-history query.
+      if (report) {
+        qc.invalidateQueries({
+          queryKey: reportsQueryKeys.entity(
+            report.reported.entityType,
+            report.reported.entityId
+          ),
+        })
+      }
     },
     onError: (e) => {
       toast.error(e instanceof Error ? e.message : 'Failed to resolve report')
@@ -79,6 +89,14 @@ export default function ReportDetailPage() {
       setDismissNotes('')
       qc.invalidateQueries({ queryKey: reportsQueryKeys.lists() })
       if (id) qc.invalidateQueries({ queryKey: reportsQueryKeys.detail(id) })
+      if (report) {
+        qc.invalidateQueries({
+          queryKey: reportsQueryKeys.entity(
+            report.reported.entityType,
+            report.reported.entityId
+          ),
+        })
+      }
     },
     onError: (e) => {
       toast.error(e instanceof Error ? e.message : 'Failed to dismiss report')

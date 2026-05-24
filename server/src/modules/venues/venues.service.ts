@@ -1,5 +1,6 @@
 import { VenueModel, Venue } from '../../db/models';
 import { NotFoundException, ForbiddenException, BadRequestException } from '../../plugins/error.plugin';
+import type { CreateVenueDto } from './venues.schemas';
 
 /**
  * Venues Service
@@ -8,7 +9,7 @@ export class VenuesService {
   /**
    * Create Venue
    */
-  async createVenue(userId: string, dto: any): Promise<any> {
+  async createVenue(userId: string, dto: CreateVenueDto): Promise<any> {
     const venueDoc = new VenueModel({
       ...dto,
       owner: userId,

@@ -55,6 +55,9 @@ export default function VerificationDetailPage() {
     queryFn: () => verificationsApi.getById(id, type),
   })
 
+  // Verification approve/reject are gated server-side by `UserRole.ADMIN`
+  // only — there is no fine-grained permission check. The admin dashboard
+  // layout already enforces admin access, so we don't gate further here.
   const [section, setSection] = useState<VerificationSection>('identity')
   const [venueId, setVenueId] = useState<string | undefined>(undefined)
   const [confirmApprove, setConfirmApprove] = useState(false)

@@ -73,12 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 2000)
-      await Promise.race([
-        authApi.logout(),
-        new Promise((_, reject) =>
-          controller.signal.addEventListener('abort', () => reject(new Error('timeout')))
-        ),
-      ]).catch(() => {
+      await authApi.logout(controller.signal).catch(() => {
         /* ignore — proceed regardless */
       })
       clearTimeout(timeout)

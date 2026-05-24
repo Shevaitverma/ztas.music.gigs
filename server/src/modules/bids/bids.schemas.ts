@@ -27,3 +27,8 @@ export const UpdateBidStatusSchema = t.Object({
 export const BidQuerySchema = t.Object({
   gigId: t.Optional(t.String()), // Get bids for a gig
 });
+
+// Type exports
+export type PlaceBidDto = typeof PlaceBidSchema.static;
+export type UpdateBidStatusDto = typeof UpdateBidStatusSchema.static;
+export type BidQueryDto = typeof BidQuerySchema.static;

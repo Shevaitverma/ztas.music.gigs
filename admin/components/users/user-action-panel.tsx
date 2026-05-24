@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { Ban, CheckCircle2, PauseCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { usersApi, usersQueryKeys } from '@/lib/api/users'
+import { usePermission } from '@/lib/permissions'
 import type { AssignableUserStatus, UserDetail } from '@/lib/types'
 import { ConfirmDialog } from './confirm-dialog'
 
@@ -49,6 +50,7 @@ export function UserActionPanel({ user }: UserActionPanelProps) {
   const qc = useQueryClient()
   const [pending, setPending] = useState<PendingAction | null>(null)
   const [reason, setReason] = useState('')
+  const canBan = usePermission('BAN_USERS')
 
   const isAdminTarget = user.role === 'admin'
 
@@ -120,23 +122,28 @@ export function UserActionPanel({ user }: UserActionPanelProps) {
         )}
 
         <div className="mt-4 flex flex-wrap gap-2">
-          {!isSuspended && !isBanned && (
+          {canBan && !isSuspended && !isBanned && (
             <Button variant="danger" size="sm" onClick={() => open(ACTIONS.suspended)}>
               <PauseCircle className="h-4 w-4" />
               Suspend
             </Button>
           )}
-          {!isBanned && (
+          {canBan && !isBanned && (
             <Button variant="danger" size="sm" onClick={() => open(ACTIONS.banned)}>
               <Ban className="h-4 w-4" />
               Ban
             </Button>
           )}
-          {!isActive && (
+          {canBan && !isActive && (
             <Button variant="primary" size="sm" onClick={() => open(ACTIONS.active)}>
               <CheckCircle2 className="h-4 w-4" />
               Reactivate
             </Button>
+          )}
+          {!canBan && (
+            <p className="text-xs text-zinc-500">
+              Your admin tier doesn&apos;t have permission to change user status.
+            </p>
           )}
         </div>
       </div>

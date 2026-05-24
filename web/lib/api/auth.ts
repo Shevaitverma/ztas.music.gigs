@@ -1,6 +1,7 @@
 import { apiClient } from './client'
 import type { LoginResponse, User, UserRole } from '@/lib/types'
 
+
 /**
  * Tolerate both wire shapes: a `{ success, data, ... }` envelope produced by
  * the server's transformPlugin AND a flat payload (some routes return early
@@ -49,35 +50,6 @@ export function isRequiresRoleResponse(
 }
 
 export const authApi = {
-  /**
-   * Phone OTP verification - Firebase token goes in header.
-   * Resolves with either a full AuthResponse OR a RequiresRoleResponse when
-   * the account has no role yet (HTTP 200, structured payload — not a throw).
-   */
-  // TODO(wire-shape): phone verify currently sends Firebase token via X-Firebase-Token header
-  // while google verify uses body { idToken }. Align by moving phone to body once server accepts it.
-  verifyPhone: async (
-    idToken: string,
-    phoneNumber: string,
-    role?: UserRole,
-    name?: string
-  ): Promise<VerifyResponse> => {
-    const response = await apiClient.post<VerifyResponse>(
-      '/auth/phone/verify',
-      { phoneNumber, role, name },
-      {
-        headers: {
-          'X-Firebase-Token': idToken,
-          // Do NOT attach a stale access token — a partially-logged-in user
-          // re-verifying a phone could otherwise be authenticated server-side
-          // as a different user. The client interceptor strips this marker.
-          'X-Skip-Auth': 'true',
-        },
-      }
-    )
-    return unwrap<VerifyResponse>(response)
-  },
-
   /**
    * Google sign-in verification - idToken goes in body.
    * Resolves with either a full AuthResponse OR a RequiresRoleResponse when
@@ -141,8 +113,8 @@ export const authApi = {
   /**
    * Logout current user
    */
-  logout: async (): Promise<void> => {
-    await apiClient.post('/auth/logout')
+  logout: async (signal?: AbortSignal): Promise<void> => {
+    await apiClient.post('/auth/logout', undefined, { signal })
   },
 
   /**

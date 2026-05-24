@@ -1,6 +1,7 @@
 import { BidModel, GigModel, Bid, ApplicationModel } from '../../db/models';
 import { NotFoundException, BadRequestException, ForbiddenException, ConflictException } from '../../plugins/error.plugin';
 import { BidStatus, GigStatus, ApplicationStatus } from '../../shared/enums';
+import type { PlaceBidDto } from './bids.schemas';
 
 /**
  * Bids Service - Reverse Auction System
@@ -50,7 +51,7 @@ export class BidsService {
    * - Subsequent bids must be strictly lower than the current lowest pending.
    * - Event must still be in the future.
    */
-  async placeBid(userId: string, dto: any): Promise<any> {
+  async placeBid(userId: string, dto: PlaceBidDto): Promise<any> {
     const gig = await GigModel.findById(dto.gigId).exec();
 
     if (!gig) {

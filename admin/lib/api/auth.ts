@@ -24,24 +24,6 @@ export function isRequiresRoleResponse(
 }
 
 export const authApi = {
-  /**
-   * Verify a Firebase phone OTP. Admin signup is NOT supported here — if the
-   * server reports `requiresRole`, the UI must reject login.
-   */
-  verifyPhone: async (idToken: string, phoneNumber: string): Promise<VerifyResponse> => {
-    const response = await apiClient.post<VerifyResponse>(
-      '/auth/phone/verify',
-      { phoneNumber },
-      {
-        headers: {
-          'X-Firebase-Token': idToken,
-          'X-Skip-Auth': 'true',
-        },
-      }
-    )
-    return response.data
-  },
-
   /** Verify a Google sign-in id token. */
   verifyGoogle: async (idToken: string): Promise<VerifyResponse> => {
     const response = await apiClient.post<VerifyResponse>(

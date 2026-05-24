@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { VenuesService } from './venues.service';
-import { CreateVenueSchema, UpdateVenueSchema } from './venues.schemas';
+import { CreateVenueSchema, UpdateVenueSchema, type CreateVenueDto } from './venues.schemas';
 import { UserRole } from '../../shared/enums';
 import { getAuthUser, type RouteContext } from '../../shared/types/auth.types';
 import { transformPlugin } from '../../plugins/transform.plugin';
@@ -24,7 +24,7 @@ export const venuesRoutes = (venuesService: VenuesService) =>
           throw new ForbiddenException('Only clients/admins can create venues');
         }
         const context = ctx as RouteContext;
-        return await venuesService.createVenue(user.userId, context.body);
+        return await venuesService.createVenue(user.userId, context.body as CreateVenueDto);
       },
       {
         body: CreateVenueSchema,

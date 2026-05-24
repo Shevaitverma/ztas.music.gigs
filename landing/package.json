@@ -1,0 +1,35 @@
+{
+  "name": "ai-zts-music-landing",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@radix-ui/react-slot": "^1.1.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.13.1",
+    "lucide-react": "^0.468.0",
+    "next": "16.1.4",
+    "nuqs": "^2.2.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^2.5.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.3",
+    "@tailwindcss/postcss": "^4.1.10",
+    "@tailwindcss/typography": "^0.5.15",
+    "@types/node": "^22.10.1",
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.1",
+    "eslint": "^9.16.0",
+    "eslint-config-next": "16.1.4",
+    "tailwindcss": "^4.1.10",
+    "typescript": "^5.7.2"
+  }
+}

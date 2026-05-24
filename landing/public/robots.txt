@@ -1,0 +1,13 @@
+# ZTS Music Landing Page - robots.txt
+# https://www.robotstxt.org/robotstxt.html
+
+User-agent: *
+Allow: /
+
+# Block admin paths (if any)
+Disallow: /admin/
+Disallow: /api/
+Disallow: /_next/
+
+# Sitemap
+Sitemap: https://ztsmusic.com/sitemap.xml

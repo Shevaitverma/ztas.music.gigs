@@ -28,8 +28,14 @@ export function PiiField({ label, masked, userId, field }: PiiFieldProps) {
 
   const handleReveal = () => {
     if (!revealed) {
-      // eslint-disable-next-line no-console
-      console.info('[admin-pii-reveal]', field, userId)
+      // TODO: wire to server-side audit-trail endpoint so reveals are logged
+      // against the acting admin with the raw userId server-side, not here.
+      // Until then we only emit a dev-only breadcrumb without the raw userId
+      // to avoid leaking PII into browser consoles / log shippers in prod.
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.info('[admin-pii-reveal]', field)
+      }
     }
     setRevealed((v) => !v)
   }

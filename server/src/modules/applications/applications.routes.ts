@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { ApplicationsService } from './applications.service';
-import { CreateApplicationSchema, UpdateApplicationStatusSchema } from './applications.schemas';
+import { CreateApplicationSchema, UpdateApplicationStatusSchema, type CreateApplicationDto } from './applications.schemas';
 import { UserRole, ApplicationStatus } from '../../shared/enums';
 import { getAuthUser, type RouteContext } from '../../shared/types/auth.types';
 import { transformPlugin } from '../../plugins/transform.plugin';
@@ -24,7 +24,7 @@ export const applicationsRoutes = (applicationsService: ApplicationsService) =>
           throw new ForbiddenException('Only artists can apply');
         }
         const context = ctx as RouteContext;
-        return await applicationsService.createApplication(user.userId, context.body);
+        return await applicationsService.createApplication(user.userId, context.body as CreateApplicationDto);
       },
       {
         body: CreateApplicationSchema,

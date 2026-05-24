@@ -1,5 +1,7 @@
 import * as nodeCrypto from 'node:crypto';
 import { UserModel } from '../../db/models';
+import type { User } from '../../db/models/user.model';
+import type { LoginDto } from './auth.schemas';
 import { firebaseAdminService } from '../../services/firebase-admin.service';
 import { logger } from '../../services/logger.service';
 import { AuthProvider, UserStatus, UserRole } from '../../shared/enums';
@@ -140,113 +142,6 @@ const SIGNUP_ALLOWED_ROLES = new Set<UserRole>([UserRole.CLIENT, UserRole.ARTIST
  * Handles Firebase + JWT authentication
  */
 export class AuthService {
-  /**
-   * Verify phone OTP and authenticate user.
-   *
-   * If the verified user has no account yet AND no valid signup-role was sent,
-   * we return `{ requiresRole: true, claims, providerProfile }` instead of
-   * throwing. The route layer mints a short-lived `signupToken` from the
-   * claims; the frontend uses it to call `/auth/complete-signup` once the
-   * user picks a role.
-   */
-  async verifyPhoneOtp(
-    idToken: string,
-    dto: { phoneNumber: string; role?: UserRole; name?: string }
-  ): Promise<FirebaseVerifyResult> {
-    try {
-      // Verify Firebase ID token
-      const decodedToken = await firebaseAdminService.verifyIdToken(idToken);
-
-      // Validate phone number matches
-      if (decodedToken.phone_number !== dto.phoneNumber) {
-        throw new BadRequestException('Phone number does not match the verified token');
-      }
-
-      // Find or create user
-      let user = await UserModel.findOne({ firebaseUid: decodedToken.uid }).exec();
-
-      // Fallback: Check by phone number — only rebind if no firebaseUid is set.
-      if (!user && dto.phoneNumber) {
-        user = await UserModel.findOne({ phoneNumber: dto.phoneNumber }).exec();
-        if (user) {
-          if (user.firebaseUid && user.firebaseUid !== decodedToken.uid) {
-            authLogger.warn('Phone number already linked to a different firebaseUid; refusing silent rebind', {
-              userId: user._id.toString(),
-            });
-            throw new UnauthorizedException(
-              'This phone number is already linked to another account. Contact support to re-link.'
-            );
-          }
-          // Bind Firebase UID to existing user (only when previously unbound)
-          user.firebaseUid = decodedToken.uid;
-          user.authProvider = AuthProvider.PHONE;
-          await user.save();
-        }
-      }
-
-      if (!user) {
-        // No existing user. If the client did NOT supply a valid signup role,
-        // surface a structured "needs role" response rather than throwing —
-        // the frontend will route to the role-picker screen.
-        if (!dto.role || !SIGNUP_ALLOWED_ROLES.has(dto.role)) {
-          authLogger.info('Phone-verified user has no role yet; issuing signup challenge', {
-            uid: decodedToken.uid,
-          });
-          return {
-            requiresRole: true,
-            claims: {
-              type: 'signup',
-              uid: decodedToken.uid,
-              phoneNumber: dto.phoneNumber,
-              name: dto.name,
-              provider: AuthProvider.PHONE,
-            },
-            providerProfile: {
-              phoneNumber: dto.phoneNumber,
-              displayName: dto.name,
-            },
-          };
-        }
-
-        // Create new user (role already validated above).
-        user = await UserModel.create({
-          firebaseUid: decodedToken.uid,
-          phoneNumber: dto.phoneNumber,
-          name: dto.name,
-          role: dto.role,
-          authProvider: AuthProvider.PHONE,
-          status: UserStatus.ACTIVE,
-          joinedAt: new Date(),
-          lastLogin: new Date(),
-        });
-
-        authLogger.info('New user created with phone authentication', {
-          userId: user._id.toString(),
-        });
-      } else {
-        user.lastLogin = new Date();
-        await user.save();
-        authLogger.info('User logged in', { userId: user._id.toString() });
-      }
-
-      this.validateUserStatus(user);
-
-      return {
-        requiresRole: false,
-        user,
-        firebaseUid: decodedToken.uid,
-      };
-    } catch (error) {
-      if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
-        throw error;
-      }
-      authLogger.warn('Firebase phone verification failed', {
-        code: (error as { code?: string })?.code,
-      });
-      throw new UnauthorizedException('Invalid or expired token');
-    }
-  }
-
   /**
    * Verify Google ID token and authenticate user
    */
@@ -413,7 +308,7 @@ export class AuthService {
    * timing profile is comparable to a real verify. Throttles after
    * `MAX_FAILED_LOGINS` failures within `LOGIN_LOCKOUT_WINDOW_MS`.
    */
-  async login(dto: { email: string; password: string }): Promise<{ user: any }> {
+  async login(dto: LoginDto): Promise<{ user: User }> {
     const user = await UserModel.findOne({ email: dto.email })
       .select('+password +loginAttempts +lastFailedLoginAt')
       .exec();
@@ -603,7 +498,7 @@ export class AuthService {
    * SECURITY (M7): leak-resistant — all non-ACTIVE statuses produce the same
    * client-facing message; the actual status is logged server-side for ops.
    */
-  private validateUserStatus(user: any): void {
+  private validateUserStatus(user: User): void {
     if (user.status === UserStatus.ACTIVE) return;
 
     authLogger.info('Login blocked by user status', {
@@ -616,7 +511,7 @@ export class AuthService {
   /**
    * Map User to DTO - includes full profile data
    */
-  private mapUserToDto(user: any) {
+  private mapUserToDto(user: User) {
     const dto: Record<string, any> = {
       id: user._id.toString(),
       firebaseUid: user.firebaseUid,

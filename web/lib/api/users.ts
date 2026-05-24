@@ -1,8 +1,5 @@
 import { apiClient } from './client'
 import type { User, UpdateArtistProfileInput } from '@/lib/types'
-import axios from 'axios'
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1'
 
 export const usersApi = {
   getMe: async () => {
@@ -76,14 +73,13 @@ export const usersApi = {
     formData.append('file', file)
 
     // Auth carried by httpOnly cookies — no Bearer header needed.
-    const response = await axios.post(`${API_BASE_URL}/users/profile/picture`, formData, {
+    const response = await apiClient.post<{ url: string }>('/users/profile/picture', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      withCredentials: true,
     })
 
     // Handle wrapped response
-    return response.data?.data || response.data
+    return (response as any)?.data || (response as unknown as { url: string })
   },
 }

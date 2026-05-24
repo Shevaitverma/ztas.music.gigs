@@ -1,0 +1,60 @@
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: zts-server
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./server/.env
+    environment:
+      PORT: 8080
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:8080/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  landing:
+    build:
+      context: ./landing
+      dockerfile: Dockerfile
+    container_name: zts-landing
+    ports:
+      - "3002:3002"
+    env_file:
+      - ./landing/.env.local
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: zts-web
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./web/.env.local
+    environment:
+      INTERNAL_API_URL: http://server:8080/api/v1
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # admin:
+  #   build:
+  #     context: ./admin
+  #     dockerfile: Dockerfile
+  #   container_name: zts-admin
+  #   ports:
+  #     - "3001:3001"
+  #   env_file:
+  #     - ./admin/.env.local
+  #   depends_on:
+  #     server:
+  #       condition: service_healthy
+  #   restart: unless-stopped

@@ -13,32 +13,6 @@ const SignupRoleSchema = t.Union([
 ]);
 
 /**
- * Schema for verifying phone OTP
- */
-export const VerifyOtpSchema = t.Object({
-  phoneNumber: t.String({
-    pattern: '^\\+[1-9]\\d{1,14}$',
-    description: 'Phone number with country code (E.164 format)',
-    examples: ['+919876543210'],
-  }),
-  otp: t.Optional(
-    t.String({
-      minLength: 4,
-      maxLength: 6,
-      description: 'OTP code (optional - verified by Firebase)',
-    })
-  ),
-  role: t.Optional(SignupRoleSchema),
-  name: t.Optional(
-    t.String({
-      minLength: 1,
-      maxLength: 100,
-      description: 'User display name',
-    })
-  ),
-});
-
-/**
  * Schema for Google authentication
  */
 export const GoogleAuthSchema = t.Object({
@@ -103,7 +77,6 @@ export type CompleteSignupDto = typeof CompleteSignupSchema.static;
 
 // Type exports for TypeScript
 export type SignupRole = typeof SignupRoleSchema.static;
-export type VerifyOtpDto = typeof VerifyOtpSchema.static;
 export type GoogleAuthDto = typeof GoogleAuthSchema.static;
 export type LoginDto = typeof LoginSchema.static;
 export type RefreshTokenDto = typeof RefreshTokenSchema.static;

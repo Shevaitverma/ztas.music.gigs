@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { BidsService } from './bids.service';
-import { PlaceBidSchema, UpdateBidStatusSchema } from './bids.schemas';
+import { PlaceBidSchema, UpdateBidStatusSchema, type PlaceBidDto } from './bids.schemas';
 import { UserRole, BidStatus } from '../../shared/enums';
 import { getAuthUser, type RouteContext } from '../../shared/types/auth.types';
 import { transformPlugin } from '../../plugins/transform.plugin';
@@ -26,7 +26,7 @@ export const bidsRoutes = (bidsService: BidsService) =>
           throw new ForbiddenException('Only artists can place bids');
         }
         const context = ctx as RouteContext;
-        const bid = await bidsService.placeBid(user.userId, context.body);
+        const bid = await bidsService.placeBid(user.userId, context.body as PlaceBidDto);
 
         // Broadcast new bid to gig room
         const server = (ctx as any).server;

@@ -34,7 +34,7 @@ export const swaggerPlugin = () =>
               type: 'http',
               scheme: 'bearer',
               bearerFormat: 'JWT',
-              description: 'JWT access token from /auth/phone/verify or /auth/google/verify',
+              description: 'JWT access token from /auth/google/verify',
             },
           },
         },

@@ -6,6 +6,7 @@ import {
   ConflictException,
 } from '../../plugins/error.plugin';
 import { ApplicationStatus, BidStatus, GigStatus } from '../../shared/enums';
+import type { CreateApplicationDto } from './applications.schemas';
 
 /**
  * Valid application status transitions.
@@ -53,7 +54,7 @@ export class ApplicationsService {
    * Mirrors placeBid's validations: gig must be LIVE, must not be the
    * applicant's own gig, and the event must still be in the future.
    */
-  async createApplication(userId: string, dto: any): Promise<any> {
+  async createApplication(userId: string, dto: CreateApplicationDto): Promise<any> {
     const gig = await GigModel.findById(dto.gigId).exec();
 
     if (!gig) {

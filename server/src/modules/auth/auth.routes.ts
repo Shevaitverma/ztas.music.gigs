@@ -3,7 +3,6 @@ import { jwt } from '@elysiajs/jwt';
 import { AuthService } from './auth.service';
 import type { SignupTokenClaims } from './auth.service';
 import {
-  VerifyOtpSchema,
   GoogleAuthSchema,
   LoginSchema,
   RefreshTokenSchema,
@@ -13,7 +12,7 @@ import type { JwtPayload, JwtRefreshPayload, RouteContext } from '../../shared/t
 import { getAuthUser } from '../../shared/types/auth.types';
 import { transformPlugin } from '../../plugins/transform.plugin';
 import { UserRole } from '../../shared/enums';
-import { BadRequestException, UnauthorizedException } from '../../plugins/error.plugin';
+import { UnauthorizedException } from '../../plugins/error.plugin';
 import { config } from '../../config';
 import { setAuthCookies, clearAuthCookies, type CookieJar } from '../../shared/utils/cookies';
 
@@ -42,91 +41,6 @@ export const authRoutes = (authService: AuthService) =>
         exp: SIGNUP_TOKEN_EXP,
       })
     )
-    /**
-     * Phone OTP Verification (Public)
-     */
-    .post(
-      '/phone/verify',
-      async (ctx) => {
-        const context = ctx as RouteContext;
-        const { body, headers } = context;
-        const jwt = context.jwt!;
-        const refreshJwt = context.refreshJwt!;
-        const signupJwt = (ctx as any).signupJwt as {
-          sign: (payload: unknown) => Promise<string>;
-        };
-
-        // Firebase ID token from header
-        const idToken = headers['x-firebase-token'] || headers['authorization']?.replace('Bearer ', '');
-
-        if (!idToken) {
-          throw new BadRequestException('Firebase ID token required in X-Firebase-Token header');
-        }
-
-        const result = await authService.verifyPhoneOtp(
-          idToken,
-          body as { phoneNumber: string; role?: UserRole; name?: string }
-        );
-
-        // No role yet → return signup challenge instead of access tokens.
-        if (result.requiresRole) {
-          const signupToken = await signupJwt.sign(result.claims);
-          return {
-            requiresRole: true,
-            signupToken,
-            providerProfile: result.providerProfile,
-          };
-        }
-
-        // Generate JWT tokens
-        const accessPayload: JwtPayload = {
-          sub: result.user._id.toString(),
-          firebaseUid: result.firebaseUid,
-          email: result.user.email,
-          phoneNumber: result.user.phoneNumber,
-          role: result.user.role,
-          type: 'access',
-        };
-
-        const refreshPayload: JwtRefreshPayload = {
-          sub: result.user._id.toString(),
-          type: 'refresh',
-        };
-
-        const accessToken = await jwt.sign(accessPayload);
-        const refreshToken = await refreshJwt.sign(refreshPayload);
-
-        // Store refresh token
-        await authService.updateRefreshToken(result.user._id.toString(), refreshToken);
-
-        // Additive: also set httpOnly cookies for browser clients.
-        setAuthCookies((ctx as { cookie: CookieJar }).cookie, { accessToken, refreshToken });
-
-        return {
-          requiresRole: false,
-          accessToken,
-          refreshToken,
-          user: {
-            id: result.user._id.toString(),
-            firebaseUid: result.user.firebaseUid,
-            email: result.user.email,
-            phoneNumber: result.user.phoneNumber,
-            name: result.user.name,
-            role: result.user.role,
-            profilePicture: result.user.profilePicture,
-          },
-        };
-      },
-      {
-        body: VerifyOtpSchema,
-        detail: {
-          tags: ['Auth'],
-          summary: 'Verify phone OTP',
-          description: 'Verify Firebase phone OTP and authenticate user',
-        },
-      }
-    )
-
     /**
      * Google Sign-In Verification (Public)
      */
@@ -350,8 +264,8 @@ export const authRoutes = (authService: AuthService) =>
     /**
      * Complete Signup (Public).
      *
-     * Redeems a short-lived signupToken (issued by `/auth/phone/verify` or
-     * `/auth/google/verify` when the user has no role yet), creates the user
+     * Redeems a short-lived signupToken (issued by `/auth/google/verify` when
+     * the user has no role yet), creates the user
      * with the chosen role, and returns the standard access/refresh token
      * pair. Idempotent: if the user already exists (e.g., race), this returns
      * a normal login response.
@@ -433,7 +347,7 @@ export const authRoutes = (authService: AuthService) =>
           tags: ['Auth'],
           summary: 'Complete signup with role selection',
           description:
-            'Redeem a signupToken (returned by /auth/phone/verify or /auth/google/verify when requiresRole=true) and create the user with the chosen role.',
+            'Redeem a signupToken (returned by /auth/google/verify when requiresRole=true) and create the user with the chosen role.',
         },
       }
     )

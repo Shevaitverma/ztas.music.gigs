@@ -43,3 +43,7 @@ export const UpdateVenueSchema = t.Object({
   coordinates: t.Optional(CoordinateSchema),
   params: t.Optional(VenueParamsSchema),
 });
+
+// Type exports
+export type CreateVenueDto = typeof CreateVenueSchema.static;
+export type UpdateVenueDto = typeof UpdateVenueSchema.static;

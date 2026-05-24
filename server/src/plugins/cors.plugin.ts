@@ -31,7 +31,7 @@ export const corsPlugin = (allowedOrigins: string[] = ['*']) => {
       origin,
       credentials: true,
       methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Firebase-Token', 'X-Request-ID'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Request-ID'],
       exposeHeaders: ['Content-Length', 'Content-Type', 'X-Request-ID'],
       maxAge: 86400, // 24 hours
     })

@@ -7,8 +7,14 @@ const protectedRoutes = ['/artist', '/client', '/admin', '/onboarding']
 // Routes that should redirect to dashboard if already authenticated
 const authRoutes = ['/login', '/register']
 
+// Middleware runs server-side (edge runtime). In Docker, the browser-facing
+// NEXT_PUBLIC_API_URL points at localhost:8080, which won't resolve from
+// inside the container. INTERNAL_API_URL lets compose route us to the server
+// service (e.g. http://server:8080/api/v1) without changing the browser URL.
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1'
+  process.env.INTERNAL_API_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:8080/api/v1'
 
 const ME_FETCH_TIMEOUT_MS = 3000
 
@@ -79,7 +85,16 @@ export async function middleware(request: NextRequest) {
   if (isProtectedRoute) {
     if (authed === true) return NextResponse.next()
     const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('next', pathname)
+    // Skip appending ?next= if already on an auth path (defensive — middleware
+    // shouldn't reach here for auth routes, but guards against future changes).
+    const isAuthPath =
+      pathname === '/login' ||
+      pathname === '/register' ||
+      pathname.startsWith('/onboarding')
+    if (!isAuthPath) {
+      const nextValue = pathname + (request.nextUrl.search || '')
+      loginUrl.searchParams.set('next', nextValue)
+    }
     return NextResponse.redirect(loginUrl)
   }
 

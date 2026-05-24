@@ -40,7 +40,6 @@ interface RateLimitEntry {
 const DEFAULT_ROUTE_LIMITS: Record<string, { max: number; windowMs: number }> = {
   // Auth — credential stuffing / OTP brute-force protection
   'POST /api/v1/auth/login':            { max: 5,  windowMs: 15 * 60 * 1000 },
-  'POST /api/v1/auth/phone/verify':     { max: 5,  windowMs: 5 * 60 * 1000 },
   'POST /api/v1/auth/google/verify':    { max: 10, windowMs: 5 * 60 * 1000 },
   'POST /api/v1/auth/refresh':          { max: 30, windowMs: 60 * 1000 },
   // User-generated content

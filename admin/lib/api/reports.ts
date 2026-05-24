@@ -1,6 +1,21 @@
 import { apiClient } from './client'
-import type { AdminReport, AdminReportListFilters, PaginatedData } from '@/lib/types'
+import type {
+  AdminReport,
+  AdminReportListFilters,
+  ServerPagination,
+} from '@/lib/types'
 import { verdictToAction, type ResolveVerdict } from '@/lib/schemas/report'
+
+/**
+ * Server response shape for the reports list endpoint. The server emits
+ * `pagination` (canonical) — see reports.routes.ts. We expose a synthesised
+ * `meta` field below for back-compat with legacy callers that still read
+ * `query.data.meta.total` (mirrors `lib/api/users.ts`).
+ */
+interface ReportsListResponse {
+  data: AdminReport[]
+  pagination: ServerPagination
+}
 
 /**
  * Server contract — see
@@ -33,12 +48,36 @@ function toQuery(params: ListReportsParams): Record<string, string> {
 }
 
 export const reportsApi = {
-  list: async (params: ListReportsParams = {}): Promise<PaginatedData<AdminReport>> => {
-    const response = await apiClient.get<PaginatedData<AdminReport>>(
+  list: async (
+    params: ListReportsParams = {}
+  ): Promise<
+    ReportsListResponse & {
+      meta: ServerPagination & { hasNextPage: boolean; hasPreviousPage: boolean }
+    }
+  > => {
+    const response = await apiClient.get<ReportsListResponse>(
       '/reports/admin/search',
       { params: toQuery(params) }
     )
-    return response.data
+    const payload = response.data
+    // Back-compat: legacy callers (reports list page) read `.meta.total` —
+    // synthesise it from the server's `pagination` envelope without dropping
+    // the new canonical field. Mirrors `lib/api/users.ts`.
+    const pagination = payload.pagination ?? {
+      total: payload.data?.length ?? 0,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    }
+    return {
+      ...payload,
+      pagination,
+      meta: {
+        ...pagination,
+        hasNextPage: pagination.page < pagination.totalPages,
+        hasPreviousPage: pagination.page > 1,
+      },
+    }
   },
 
   getById: async (id: string): Promise<AdminReport> => {

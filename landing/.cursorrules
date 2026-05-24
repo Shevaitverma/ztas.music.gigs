@@ -1,0 +1,287 @@
+# Cursor Rules for Next.js Landing Page
+
+## Expert Stack
+
+You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, Tailwind CSS, and Framer Motion.
+
+## Core Stack & Package Manager
+
+- Use **latest stable Next.js** with App Router
+- Use **pnpm** as package manager exclusively
+- TypeScript strict mode enabled
+
+## Code Quality Standards
+
+### Type Safety
+
+- **Strictly typed** - NO `any` types allowed
+- **Prefer interfaces over types** for object shapes
+- Use proper TypeScript interfaces and types
+- Prefer `unknown` over `any` when type is truly unknown
+- Use generics where appropriate
+- **Avoid enums; use maps instead**
+
+### Code Style and Structure
+
+- Write concise, technical TypeScript code with accurate examples
+- Use **functional and declarative programming patterns; avoid classes**
+- Use functional components with TypeScript interfaces
+- Use the "function" keyword for pure functions
+- Prefer iteration and modularization over code duplication
+- Use descriptive variable names with auxiliary verbs (e.g., `isLoading`, `hasError`)
+- Structure files: exported component, subcomponents, helpers, static content, types
+- Avoid unnecessary curly braces in conditionals; use concise syntax for simple statements
+- Use declarative JSX
+
+### Linting & Errors
+
+- **Zero linting errors** - fix immediately
+- **Zero console logs** - use centralized logger instead
+- Always run `pnpm build` before committing
+
+### Rendering & Performance
+
+- **No infinite rendering loops**
+- **Minimize 'use client', 'useEffect', and 'setState'**
+- **Favor React Server Components (RSC)**
+- Avoid unnecessary re-renders
+- Use React.memo() for expensive components when needed
+- **Avoid useEffect unless critically important**
+  - Prefer derived state over useEffect
+  - Use React Server Components when possible
+  - Only use useEffect for side effects that truly need it (subscriptions, DOM manipulation)
+- Wrap client components in Suspense with fallback
+- Use dynamic loading for non-critical components
+
+### Routing & Navigation
+
+- **NO useParams** - use alternative approaches
+- **NO useSearchParams** - use **'nuqs'** for URL search parameter state management
+- Use Server Components for data fetching when possible
+- Pass data through props or RSC patterns
+- Follow Next.js docs for Data Fetching, Rendering, and Routing
+
+## UI & Component Guidelines
+
+### shadcn/ui Integration
+
+- **Always check if shadcn component exists first** before building custom
+- Use Shadcn UI and Tailwind for components and styling
+- Use shadcn components as base when available
+- Only create custom components when:
+  - shadcn doesn't have the component
+  - Specific business logic requires it
+  - Significant customization is needed beyond theming
+
+### Styling
+
+- Implement responsive design with Tailwind CSS
+- Use a **mobile-first approach**
+- Use Framer Motion for animations when needed
+
+### Component Architecture
+
+- Use **custom components everywhere** when needed for reusability
+- Co-locate components with their usage when specific
+- Create shared components in `components/` for reusable elements
+- Prefer composition over prop drilling
+
+### Naming Conventions
+
+- **All components should go in src/components and be named like `new-component.tsx`**
+- Use lowercase with dashes for directories (e.g., `components/auth-wizard`)
+- **Favor named exports for components**
+
+## Folder Structure (Industrial Standard)
+
+```
+├── src/
+│   ├── app/                          # Next.js app router
+│   │   ├── (routes)/                # Route groups
+│   │   │   └── _components/         # Private components for specific routes
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   └── globals.css
+│   ├── components/                   # Reusable shared components
+│   │   ├── ui/                      # shadcn components
+│   │   ├── forms/                   # Form components
+│   │   │   ├── text-field.tsx
+│   │   │   └── select.tsx
+│   │   ├── layout/                  # Layout components
+│   │   │   ├── navbar.tsx
+│   │   │   └── footer.tsx
+│   │   └── sections/                # Landing page sections
+│   ├── lib/                         # Utility functions
+│   │   ├── utils.ts                 # General utilities
+│   │   └── logger.ts                # Centralized logger
+│   ├── hooks/                       # Custom React hooks
+│   ├── types/                       # TypeScript type definitions
+│   ├── config/                      # Configuration files
+│   ├── constants/                   # Constants (use maps, not enums)
+│   └── styles/                      # Global styles
+├── public/                          # Static assets
+├── .cursorrules                     # This file
+├── package.json
+├── tsconfig.json
+└── next.config.mjs
+```
+
+### Components Organization
+
+**By Type (Recommended for most projects):**
+
+```
+/src/components
+├── /ui              # shadcn components
+├── /forms           # Form-related components
+├── /layout          # Layout components (Navbar, Footer, etc.)
+└── /sections        # Page sections
+```
+
+**By Feature (For larger applications):**
+
+```
+/src/components
+├── /auth
+│   ├── login-form.tsx
+│   └── signup-form.tsx
+├── /dashboard
+│   ├── stats-card.tsx
+│   └── activity-feed.tsx
+└── /ui              # Shared UI components
+```
+
+**Component Placement Rules:**
+
+- **Private Components**: For components used only within specific pages, create a `_components` folder within the relevant `/app` subdirectory
+- **Shared Components**: The `/src/components` folder should contain reusable components used across multiple pages or features
+- **Modular Approach**: As your project grows, adopt a modular structure where each feature has its own folder containing components, hooks, and utilities
+
+## Performance Optimization
+
+### Images
+
+- Optimize images: use WebP format
+- Include size data in next/image
+- Implement lazy loading
+- **Use https://placekitten.com/ for placeholder images in seed data**
+
+### Web Vitals
+
+- Optimize Web Vitals (LCP, CLS, FID)
+- Monitor and improve Core Web Vitals continuously
+
+### Client Components
+
+- **Limit 'use client' usage:**
+  - Favor server components and Next.js SSR
+  - Use only for Web API access in small components
+  - Avoid for data fetching or state management
+  - Only use when absolutely necessary (interactivity, browser APIs, hooks)
+
+## Logging
+
+### Centralized Logger Usage
+
+```typescript
+// lib/logger.ts structure
+import { logger } from "@/lib/logger";
+
+// Instead of console.log
+logger.info("User action", { userId: "123" });
+logger.error("Error occurred", { error });
+logger.warn("Warning message");
+logger.debug("Debug info"); // Only in development
+```
+
+## Pre-Commit Checklist
+
+- [ ] No `any` types
+- [ ] No console.logs (use logger)
+- [ ] No linting errors
+- [ ] `pnpm build` passes successfully
+- [ ] No infinite rendering issues
+- [ ] useEffect used only when critically important
+- [ ] No useParams (use nuqs for search params)
+- [ ] shadcn components used where available
+- [ ] Server Components used by default
+- [ ] Client components wrapped in Suspense
+- [ ] Images optimized (WebP, lazy loading)
+
+## Best Practices
+
+### Server Components First
+
+- **Default to Server Components**
+- Use Client Components only when needed:
+  - Interactive elements (onClick, onChange)
+  - Browser APIs (localStorage, window)
+  - React hooks (useState, useEffect, useContext)
+
+### Data Fetching
+
+- Fetch in Server Components directly
+- Use async/await in Server Components
+- Pass data as props to Client Components
+- Follow Next.js data fetching best practices
+
+### State Management
+
+- Keep state as local as possible
+- Use **'nuqs'** for URL search parameter state management
+- Consider React Context only for truly global state
+- Minimize useState usage; prefer derived state
+
+### URL State Management
+
+- Use **'nuqs'** instead of useSearchParams
+- Example:
+
+```typescript
+import { useQueryState } from "nuqs";
+
+function Component() {
+  const [search, setSearch] = useQueryState("search");
+  // Instead of useSearchParams
+}
+```
+
+## Common Patterns to AVOID
+
+- ❌ `const data: any = ...`
+- ❌ `console.log(...)`
+- ❌ Using classes instead of functions
+- ❌ Using enums (use maps)
+- ❌ Using types instead of interfaces for objects
+- ❌ Unnecessary useEffect for derived state
+- ❌ useParams() / useSearchParams() (use nuqs)
+- ❌ Creating custom components when shadcn has equivalent
+- ❌ Overusing 'use client'
+- ❌ Data fetching in client components
+- ❌ Committing without running build
+
+## Common Patterns to FOLLOW
+
+- ✅ `const data: DataType = ...`
+- ✅ `logger.info(...)`
+- ✅ Functional and declarative patterns
+- ✅ Maps instead of enums
+- ✅ Interfaces for object types
+- ✅ Derive state from props
+- ✅ Pass data through RSC props
+- ✅ Use 'nuqs' for URL state
+- ✅ Check shadcn/ui docs first
+- ✅ Server Components by default
+- ✅ Wrap client components in Suspense
+- ✅ Dynamic imports for heavy components
+- ✅ Mobile-first responsive design
+- ✅ Always verify build before commit
+
+## File Naming Examples
+
+- ✅ `auth-form.tsx`
+- ✅ `user-profile.tsx`
+- ✅ `navigation-menu.tsx`
+- ❌ `AuthForm.tsx`
+- ❌ `userProfile.tsx`
+- ❌ `NavigationMenu.tsx`

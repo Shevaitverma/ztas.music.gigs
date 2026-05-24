@@ -2,28 +2,42 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { z } from 'zod'
 import { useAuth } from '@/lib/providers'
 import { authApi } from '@/lib/api'
 import toast from 'react-hot-toast'
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws/bids'
 
-type MessageType =
-  | 'BID_PLACED'
-  | 'BID_UPDATED'
-  | 'BID_STATUS_UPDATED'
-  | 'NEW_LOWER_BID'
-  | 'BID_ACCEPTED'
-  | 'BID_REJECTED'
-  | 'JOINED'
-  | 'LEFT'
-  | 'PONG'
+// Zod schema for incoming WS messages. We keep the `data` payload as
+// `unknown` (server is the source of truth for its shape) and narrow on the
+// `type` discriminant in the dispatch switch below.
+const WsMessageSchema = z.object({
+  type: z.enum([
+    'BID_PLACED',
+    'BID_UPDATED',
+    'BID_STATUS_UPDATED',
+    'NEW_LOWER_BID',
+    'BID_ACCEPTED',
+    'BID_REJECTED',
+    'JOINED',
+    'LEFT',
+    'PONG',
+  ]),
+  data: z.unknown().optional(),
+  room: z.string().optional(),
+})
 
-interface WSMessage {
-  type: MessageType
-  data?: any
-  room?: string
-}
+type WSMessage = z.infer<typeof WsMessageSchema>
+
+// Shape we expect on bid-related payloads; everything is optional because we
+// receive untrusted input over the wire.
+const BidPayloadSchema = z
+  .object({
+    gigId: z.string().optional(),
+    lowestAmount: z.number().optional(),
+  })
+  .passthrough()
 
 interface UseBidsSocketOptions {
   gigId?: string
@@ -40,6 +54,10 @@ let globalWs: WebSocket | null = null
 let globalWsListeners: Set<(message: WSMessage) => void> = new Set()
 let globalWsReconnectTimeout: NodeJS.Timeout | null = null
 let globalWsConnecting = false
+// Once we observe a 401 from /auth/ws-ticket or detect a missing access
+// cookie, stop the reconnect loop. Cleared on next successful ticket fetch
+// (e.g. after the user logs back in and a new hook instance mounts).
+let globalWsLoggedOut = false
 
 // Exponential-backoff state. Reset to 0 on successful onopen; capped at 10
 // attempts to avoid hammering a permanently-down backend.
@@ -77,9 +95,19 @@ async function fetchWsTicket(): Promise<string | null> {
   try {
     const { ticket } = await authApi.getWsTicket()
     if (!ticket || typeof ticket !== 'string') return null
+    // Successful ticket → user is authenticated; clear the logged-out flag so
+    // future reconnects are allowed.
+    globalWsLoggedOut = false
     return ticket
-  } catch {
-    // 401 → user not authenticated yet; any other error → skip this attempt.
+  } catch (err: any) {
+    const status =
+      err?.statusCode ?? err?.response?.status ?? err?.status
+    if (status === 401) {
+      // Definitive: user is logged out. Stop the reconnect loop until a new
+      // ticket fetch succeeds (which will reset this flag).
+      globalWsLoggedOut = true
+    }
+    // Other errors (transient network, 5xx, etc.) → return null but allow retry.
     return null
   }
 }
@@ -95,6 +123,12 @@ function getOrCreateWebSocket(): WebSocket | null {
 
   if (globalWs?.readyState === WebSocket.CONNECTING) {
     return globalWs
+  }
+
+  // If we've already determined the user is logged out, do not attempt a new
+  // ticket fetch (which would 401) or schedule any reconnects.
+  if (globalWsLoggedOut) {
+    return null
   }
 
   // Browsers cannot attach httpOnly cookies (or auth headers) to a WebSocket
@@ -141,12 +175,20 @@ function getOrCreateWebSocket(): WebSocket | null {
     }
 
     ws.onmessage = (event) => {
+      let raw: unknown
       try {
-        const message: WSMessage = JSON.parse(event.data)
-        globalWsListeners.forEach((listener) => listener(message))
+        raw = JSON.parse(event.data)
       } catch (e) {
-        console.error('[WS] Failed to parse message:', e)
+        console.warn('[WS] Failed to parse message JSON:', e)
+        return
       }
+      const parsed = WsMessageSchema.safeParse(raw)
+      if (!parsed.success) {
+        console.warn('[WS] Dropping invalid message:', parsed.error.issues)
+        return
+      }
+      const message = parsed.data
+      globalWsListeners.forEach((listener) => listener(message))
     }
 
     ws.onclose = () => {
@@ -161,6 +203,7 @@ function getOrCreateWebSocket(): WebSocket | null {
       // ws-ticket fetch), so we delegate that to getOrCreateWebSocket — if
       // the ticket fetch returns 401, it will simply skip the reconnect.
       if (
+        !globalWsLoggedOut &&
         globalWsListeners.size > 0 &&
         document.visibilityState === 'visible' &&
         globalWsReconnectAttempts < WS_RECONNECT_MAX_ATTEMPTS
@@ -217,50 +260,55 @@ export function useBidsSocket(options: UseBidsSocketOptions = {}) {
   const handleMessage = useCallback((message: WSMessage) => {
     const { onBidPlaced, onBidUpdated, onOutbid, onBidAccepted, onBidRejected } = callbacksRef.current
 
+    // `data` is `unknown` after zod parse — narrow with BidPayloadSchema for
+    // any branch that reads fields off it.
+    const payloadParse = BidPayloadSchema.safeParse(message.data)
+    const payload = payloadParse.success ? payloadParse.data : undefined
+
     switch (message.type) {
       case 'BID_PLACED':
-        if (message.data?.gigId) {
-          queryClient.invalidateQueries({ queryKey: ['bids', 'gig', message.data.gigId] })
-          queryClient.invalidateQueries({ queryKey: ['gig', message.data.gigId] })
+        if (payload?.gigId) {
+          queryClient.invalidateQueries({ queryKey: ['bids', 'gig', payload.gigId] })
+          queryClient.invalidateQueries({ queryKey: ['gig', payload.gigId] })
         }
-        onBidPlaced?.(message.data)
+        onBidPlaced?.(payload)
         break
 
       case 'BID_UPDATED':
-        if (message.data?.gigId) {
-          queryClient.invalidateQueries({ queryKey: ['bids', 'gig', message.data.gigId] })
+        if (payload?.gigId) {
+          queryClient.invalidateQueries({ queryKey: ['bids', 'gig', payload.gigId] })
         }
-        onBidUpdated?.(message.data)
+        onBidUpdated?.(payload)
         break
 
       case 'NEW_LOWER_BID':
         queryClient.invalidateQueries({ queryKey: ['bids', 'my'] })
         queryClient.invalidateQueries({ queryKey: ['bidStatus'] })
-        if (message.data) {
+        if (payload && typeof payload.gigId === 'string' && typeof payload.lowestAmount === 'number') {
           toast('You have been outbid! Update your bid to stay competitive.', {
             icon: '⚠️',
             duration: 5000,
           })
-          onOutbid?.(message.data)
+          onOutbid?.({ gigId: payload.gigId, lowestAmount: payload.lowestAmount })
         }
         break
 
       case 'BID_ACCEPTED':
         queryClient.invalidateQueries({ queryKey: ['bids', 'my'] })
         toast.success('Congratulations! Your bid was accepted!')
-        onBidAccepted?.(message.data)
+        onBidAccepted?.(payload)
         break
 
       case 'BID_REJECTED':
         queryClient.invalidateQueries({ queryKey: ['bids', 'my'] })
         toast('Your bid was not selected for this gig.', { icon: '😔' })
-        onBidRejected?.(message.data)
+        onBidRejected?.(payload)
         break
 
       case 'BID_STATUS_UPDATED':
-        if (message.data?.gigId) {
-          queryClient.invalidateQueries({ queryKey: ['bids', 'gig', message.data.gigId] })
-          queryClient.invalidateQueries({ queryKey: ['gig', message.data.gigId] })
+        if (payload?.gigId) {
+          queryClient.invalidateQueries({ queryKey: ['bids', 'gig', payload.gigId] })
+          queryClient.invalidateQueries({ queryKey: ['gig', payload.gigId] })
         }
         break
 
@@ -268,6 +316,7 @@ export function useBidsSocket(options: UseBidsSocketOptions = {}) {
         setIsConnected(true)
         break
 
+      case 'LEFT':
       case 'PONG':
         break
     }
@@ -360,6 +409,37 @@ export function useBidsSocket(options: UseBidsSocketOptions = {}) {
       })
     }
   }, [isConnected, gigId, asArtist, user?.id])
+
+  // React to logout: when the in-memory user transitions to null, mark the
+  // singleton as logged-out and tear down any open socket. This stops the
+  // reconnect-after-logout loop the audit flagged (401 on /auth/ws-ticket
+  // followed by a retry every few seconds).
+  useEffect(() => {
+    if (user === null) {
+      globalWsLoggedOut = true
+      if (globalWsReconnectTimeout) {
+        clearTimeout(globalWsReconnectTimeout)
+        globalWsReconnectTimeout = null
+      }
+      if (globalWs && globalWs.readyState <= WebSocket.OPEN) {
+        try {
+          globalWs.close()
+        } catch {
+          /* ignore */
+        }
+      }
+      // Reset singleton state so a subsequent login (possibly as a different
+      // user in the same tab) starts with a clean slate — no stale room
+      // refcounts, no leaked listeners from unmounted components, and a fresh
+      // reconnect-attempt counter.
+      globalRooms.clear()
+      globalWsListeners.clear()
+      globalWsReconnectAttempts = 0
+    } else {
+      // User present → allow reconnect attempts again.
+      globalWsLoggedOut = false
+    }
+  }, [user])
 
   // Handle visibility change - reconnect when tab becomes visible
   useEffect(() => {

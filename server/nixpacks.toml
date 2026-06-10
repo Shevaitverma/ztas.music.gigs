@@ -1,0 +1,23 @@
+# ============================================
+# Nixpacks build configuration — ZTS Music API (Bun + Elysia)
+# ============================================
+# Why this file exists:
+#   The platform was auto-detecting a Node build and pinning Node.js 18, which
+#   has reached End-Of-Life and was removed from nixpkgs — breaking the build
+#   ("error: Node.js 18.x has reached End-Of-Life and has been removed").
+#
+#   This service actually runs on Bun (it uses Bun.env and `bun src/index.ts`),
+#   so we pin Bun explicitly plus a supported Node (20.x) for any tooling/
+#   postinstall scripts that expect node on PATH. Bun runs TypeScript directly,
+#   so no separate build/transpile step is required.
+
+[phases.setup]
+nixPkgs = ["bun", "nodejs_20"]
+
+[phases.install]
+cmds = ["bun install --frozen-lockfile"]
+
+# No build phase: Bun executes TypeScript natively at runtime.
+
+[start]
+cmd = "bun run start"

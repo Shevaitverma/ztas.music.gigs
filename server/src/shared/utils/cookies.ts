@@ -10,16 +10,27 @@ import { config } from '../../config';
  * Cross-team contract (binding for both server and frontend):
  *  - Cookie names: `accessToken` (1h), `refreshToken` (7d)
  *  - httpOnly: true
- *  - sameSite: 'lax'
+ *  - sameSite: 'none' in production, 'lax' in dev
  *  - path: '/'
  *  - secure: true in production, false in dev
  *  - no `domain` attribute (host-only)
+ *
+ * The frontend (gigs.ztas.in) and API (gigs-api.zoef.org) live on different
+ * registrable domains, so the auth cookie is cross-site. A `SameSite=Lax`
+ * cookie is never attached to cross-site XHR/fetch, which is why /auth/me
+ * returned 401 right after /auth/google/verify succeeded. `SameSite=None`
+ * (which the browser only honours alongside `Secure`) is required for the
+ * cookie to ride cross-site requests. In dev we stay on 'lax' because plain
+ * http://localhost can't set Secure, and None without Secure is rejected.
  */
 
 const ACCESS_TOKEN_MAX_AGE = 60 * 60; // 1h, matches JWT_EXPIRATION
 const REFRESH_TOKEN_MAX_AGE = 60 * 60 * 24 * 7; // 7d, matches JWT_REFRESH_EXPIRATION
 
 const isProd = () => config.app.nodeEnv === 'production';
+
+// Cross-site cookies require SameSite=None + Secure; dev over http uses Lax.
+const sameSitePolicy = (): 'lax' | 'none' => (isProd() ? 'none' : 'lax');
 
 /**
  * Elysia 1.x exposes per-request cookies as a record of `Cookie<T>` slots,
@@ -55,11 +66,12 @@ export interface AuthTokenPair {
  */
 export function setAuthCookies(cookie: CookieJar, tokens: AuthTokenPair): void {
   const secure = isProd();
+  const sameSite = sameSitePolicy();
 
   cookie.accessToken?.set({
     value: tokens.accessToken,
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite,
     path: '/',
     maxAge: ACCESS_TOKEN_MAX_AGE,
     secure,
@@ -68,7 +80,7 @@ export function setAuthCookies(cookie: CookieJar, tokens: AuthTokenPair): void {
   cookie.refreshToken?.set({
     value: tokens.refreshToken,
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite,
     path: '/',
     maxAge: REFRESH_TOKEN_MAX_AGE,
     secure,
@@ -80,12 +92,13 @@ export function setAuthCookies(cookie: CookieJar, tokens: AuthTokenPair): void {
  */
 export function clearAuthCookies(cookie: CookieJar): void {
   const secure = isProd();
+  const sameSite = sameSitePolicy();
   const expired = new Date(0);
 
   cookie.accessToken?.set({
     value: '',
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite,
     path: '/',
     maxAge: 0,
     expires: expired,
@@ -95,7 +108,7 @@ export function clearAuthCookies(cookie: CookieJar): void {
   cookie.refreshToken?.set({
     value: '',
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite,
     path: '/',
     maxAge: 0,
     expires: expired,

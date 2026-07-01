@@ -87,6 +87,7 @@ export class ReviewsService {
     // Find the gig
     const gig = await GigModel.findById(dto.gigId)
       .populate('postedBy', 'name profilePicture')
+      .populate('acceptedArtist', 'name profilePicture')
       .populate('acceptedApplicant', 'name profilePicture')
       .exec();
 
@@ -103,11 +104,23 @@ export class ReviewsService {
     let reviewType: ReviewType;
     let revieweeId: string;
 
+    // Resolve the booked artist from the reverse-auction bid flow
+    // (`acceptedArtist`) with a fallback to the legacy applications flow
+    // (`acceptedApplicant`). The bid flow is the primary product and never
+    // sets `acceptedApplicant`, so keying solely off the legacy field broke
+    // reviews for every bid-booked gig. (SRV-001)
+    const acceptedArtist = (gig.acceptedArtist ?? gig.acceptedApplicant) as
+      | { _id?: { toString(): string }; toString(): string }
+      | undefined;
+    const artistId = acceptedArtist
+      ? (acceptedArtist._id?.toString() ?? acceptedArtist.toString())
+      : undefined;
+
     const isClient = gig.postedBy._id.toString() === userId;
-    const isArtist = gig.acceptedApplicant?._id?.toString() === userId;
+    const isArtist = artistId === userId;
 
     // SECURITY (H3): explicitly reject self-review when the same user is both
-    // the poster and the accepted applicant (edge case — usually shouldn't
+    // the poster and the accepted artist (edge case — usually shouldn't
     // happen but the data permits it).
     if (isClient && isArtist) {
       throw new BadRequestException('You cannot review yourself');
@@ -116,10 +129,10 @@ export class ReviewsService {
     if (isClient && userRole === UserRole.CLIENT) {
       // Client reviewing the artist
       reviewType = ReviewType.CLIENT_TO_ARTIST;
-      if (!gig.acceptedApplicant) {
+      if (!artistId) {
         throw new BadRequestException('No artist was accepted for this gig');
       }
-      revieweeId = gig.acceptedApplicant._id.toString();
+      revieweeId = artistId;
     } else if (isArtist && userRole === UserRole.ARTIST) {
       // Artist reviewing the client
       reviewType = ReviewType.ARTIST_TO_CLIENT;

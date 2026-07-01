@@ -2,56 +2,58 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
-  Wand2,
+  FileText,
+  MessageSquare,
   Users,
-  Globe,
-  Zap,
-  Shield,
-  BarChart3,
+  MapPin,
+  ShieldCheck,
+  LayoutDashboard,
 } from "lucide-react";
 
 interface Feature {
   icon: React.ReactNode;
   title: string;
   description: string;
+  badge?: string;
 }
 
 const features: Feature[] = [
   {
-    icon: <Wand2 className="h-5 w-5" />,
-    title: "Smart Matching",
+    icon: <FileText className="h-5 w-5" />,
+    title: "Post a Gig in Minutes",
     description:
-      "Our algorithm matches your gig with the perfect artists based on genre, budget, and availability.",
+      "Share your event, date, budget, and the kind of act you want. Artists come to you — no cold outreach.",
+  },
+  {
+    icon: <MessageSquare className="h-5 w-5" />,
+    title: "Get Competitive Quotes",
+    description:
+      "Musicians, bands, and DJs send proposals with their rate. Compare quotes side by side and shortlist.",
   },
   {
     icon: <Users className="h-5 w-5" />,
-    title: "Verified Artists",
+    title: "Artist Profiles & Samples",
     description:
-      "Browse profiles with verified reviews, sample performances, and professional credentials.",
+      "Browse profiles with audio and video samples, genres, and past work before you reach out.",
   },
   {
-    icon: <Globe className="h-5 w-5" />,
-    title: "City-Wide Reach",
+    icon: <MapPin className="h-5 w-5" />,
+    title: "Search by City & Budget",
     description:
-      "Connect with talented musicians across 50+ cities. Find local artists or discover nearby talent.",
+      "Location-based search helps organisers and artists find the right match nearby, within budget.",
   },
   {
-    icon: <Zap className="h-5 w-5" />,
-    title: "Instant Booking",
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    title: "One Place to Manage It",
     description:
-      "Review applications, chat with artists, and confirm bookings in minutes, not days.",
+      "Track your gigs, proposals, and conversations from a single dashboard — chat to lock in the details.",
   },
   {
-    icon: <Shield className="h-5 w-5" />,
-    title: "Secure Payments",
+    icon: <ShieldCheck className="h-5 w-5" />,
+    title: "Escrow & OTP Check-in",
+    badge: "Coming soon",
     description:
-      "Protected transactions with escrow-style payments. Artists get paid, venues get peace of mind.",
-  },
-  {
-    icon: <BarChart3 className="h-5 w-5" />,
-    title: "Gig Management",
-    description:
-      "Track applications, manage multiple gigs, and review past bookings from one dashboard.",
+      "Pay securely, with funds released only after an OTP check-in at your event. Rolling out during the beta, alongside artist verification.",
   },
 ];
 
@@ -126,10 +128,17 @@ function SpotlightCard({
         </div>
 
         {/* Content */}
-        <h3 className="relative mt-4 text-base font-semibold text-white">
-          {feature.title}
-        </h3>
-        <p className="relative mt-2 text-sm leading-relaxed text-white/40">
+        <div className="relative mt-4 flex items-center gap-2">
+          <h3 className="text-base font-semibold text-white">
+            {feature.title}
+          </h3>
+          {feature.badge && (
+            <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-medium text-amber-300">
+              {feature.badge}
+            </span>
+          )}
+        </div>
+        <p className="relative mt-2 text-sm leading-relaxed text-white/60">
           {feature.description}
         </p>
       </div>
@@ -207,9 +216,9 @@ export function FeaturesSection() {
               Book & Perform
             </span>
           </h2>
-          <p className="mt-4 text-base text-white/50">
-            Powerful tools designed to connect venues with talented artists
-            and make live music booking effortless.
+          <p className="mt-4 text-base text-white/60">
+            A straightforward way to connect organisers with talented artists —
+            post, compare, and book live music without the back-and-forth.
           </p>
         </div>
 

@@ -31,6 +31,30 @@ export const GoogleAuthSchema = t.Object({
 });
 
 /**
+ * Schema for phone (OTP) authentication.
+ *
+ * The Firebase phone ID token may arrive either in the `X-Firebase-Token`
+ * header (documented contract) or as body `idToken` (consistent with Google
+ * verify), so `idToken` is optional here and the route resolves header-first.
+ */
+export const PhoneAuthSchema = t.Object({
+  idToken: t.Optional(
+    t.String({
+      minLength: 1,
+      description: 'Firebase phone ID token (optional if sent via X-Firebase-Token header)',
+    })
+  ),
+  role: t.Optional(SignupRoleSchema),
+  name: t.Optional(
+    t.String({
+      minLength: 1,
+      maxLength: 100,
+      description: 'User display name',
+    })
+  ),
+});
+
+/**
  * Schema for admin login
  */
 export const LoginSchema = t.Object({

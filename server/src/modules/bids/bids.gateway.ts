@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { jwt } from '@elysiajs/jwt';
 import { config } from '../../config';
-import { UserModel } from '../../db/models';
+import { UserModel, GigModel } from '../../db/models';
 import { UserRole, UserStatus } from '../../shared/enums';
 import type { JwtPayload } from '../../shared/types/auth.types';
 import { logger } from '../../services/logger.service';
@@ -110,7 +110,7 @@ export const bidsGateway = (app: Elysia) =>
           ws.close(1008, 'Authentication failed');
         }
       },
-      message(ws, message) {
+      async message(ws, message) {
         const userId = (ws.data as Record<string, unknown>).userId as string | undefined;
         const role = (ws.data as Record<string, unknown>).role as UserRole | undefined;
         if (!userId) {
@@ -121,14 +121,43 @@ export const bidsGateway = (app: Elysia) =>
         const { type, payload } = message;
 
         switch (type) {
-          case 'JOIN_GIG':
-            // Client viewing their gig - gets all bid updates
+          case 'JOIN_GIG': {
+            // SECURITY (SRV-003): the `gig/{gigId}` room carries FULL bid objects
+            // (every competitor's exact amount + identity). Only the gig owner
+            // (the client who posted it) may join it. Everyone else — including
+            // bidding artists — must use JOIN_GIG_AS_ARTIST, which receives the
+            // sanitized `gig/{gigId}/artists` room ({ lowestAmount } only).
+            // Without this check any authenticated user could subscribe to any
+            // gigId and watch the entire bid book, deanonymizing the auction.
             if (payload?.gigId) {
-              const room = `gig/${payload.gigId}`;
-              ws.subscribe(room);
-              ws.send(JSON.stringify({ type: 'JOINED', room }));
+              try {
+                const gig = await GigModel.findById(payload.gigId)
+                  .select('postedBy')
+                  .lean()
+                  .exec();
+                if (!gig) {
+                  ws.send(JSON.stringify({ type: 'ERROR', message: 'Gig not found' }));
+                  break;
+                }
+                if (gig.postedBy.toString() !== userId) {
+                  ws.send(
+                    JSON.stringify({
+                      type: 'ERROR',
+                      message: 'Not authorized to view this gig\'s bids',
+                    })
+                  );
+                  break;
+                }
+                const room = `gig/${payload.gigId}`;
+                ws.subscribe(room);
+                ws.send(JSON.stringify({ type: 'JOINED', room }));
+              } catch {
+                // Malformed gigId (CastError) or lookup failure — deny.
+                ws.send(JSON.stringify({ type: 'ERROR', message: 'Invalid gig' }));
+              }
             }
             break;
+          }
 
           case 'JOIN_GIG_AS_ARTIST':
             // Artist viewing a gig - gets outbid notifications

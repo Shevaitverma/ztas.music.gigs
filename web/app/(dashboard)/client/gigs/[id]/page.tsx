@@ -10,7 +10,6 @@ import {
   Clock,
   MapPin,
   Users,
-  Edit2,
   Trash2,
   Send,
   AlertCircle,
@@ -225,29 +224,28 @@ export default function ClientGigDetailPage() {
           {/* Actions */}
           <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-white/5">
             {gig.status === 'DRAFT' && (
-              <>
-                <Button
-                  variant="primary"
-                  onClick={() => publishMutation.mutate()}
-                  isLoading={publishMutation.isPending}
-                  leftIcon={<Send className="w-4 h-4" />}
-                >
-                  Publish Gig
-                </Button>
-                <Button variant="secondary" leftIcon={<Edit2 className="w-4 h-4" />} asChild>
-                  <Link href={`/client/gigs/${gigId}/edit`}>Edit</Link>
-                </Button>
-              </>
-            )}
-            {gig.status === 'LIVE' && (
-              <Button variant="secondary" leftIcon={<Edit2 className="w-4 h-4" />} asChild>
-                <Link href={`/client/gigs/${gigId}/edit`}>Edit Gig</Link>
+              <Button
+                variant="primary"
+                onClick={() => publishMutation.mutate()}
+                isLoading={publishMutation.isPending}
+                leftIcon={<Send className="w-4 h-4" />}
+              >
+                Publish Gig
               </Button>
             )}
+            {/*
+              The "Edit Gig" route (/client/gigs/:id/edit) and the post-booking
+              "Manage Event" hub (/client/gigs/:id/manage) are not built yet, so
+              linking to them 404'd (WEB-006, WEB-002). The edit buttons are
+              hidden until that page ships; for a BOOKED gig we show an honest
+              status instead of a dead link. The manage hub (check-in + payment)
+              is part of the payments build.
+            */}
             {gig.status === 'BOOKED' && gig.acceptedArtist && (
-              <Button variant="primary" asChild>
-                <Link href={`/client/gigs/${gigId}/manage`}>Manage Event</Link>
-              </Button>
+              <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-300">
+                <CheckCircle2 className="w-4 h-4" />
+                Booked — event check-in &amp; payment coming soon
+              </span>
             )}
             {['DRAFT', 'LIVE'].includes(gig.status) && (
               <Button
@@ -366,7 +364,7 @@ export default function ClientGigDetailPage() {
                             size="sm"
                             asChild
                           >
-                            <Link href={`/artists/${bid.artistId}`}>
+                            <Link href={`/client/artists/${bid.artistId}`}>
                               <ExternalLink className="w-4 h-4" />
                             </Link>
                           </Button>

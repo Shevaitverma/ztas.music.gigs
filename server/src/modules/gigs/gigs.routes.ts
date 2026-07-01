@@ -208,9 +208,17 @@ export const gigsRoutes = (gigsService: GigsService) =>
      */
     .get(
       '/:id',
-      async ({ params: { id } }) => {
+      async (ctx) => {
+        const { id } = ctx.params;
         validateObjectId(id, 'gigId');
-        return await gigsService.getGig(id);
+        // Optional auth read: a non-LIVE gig is only visible to its owner/admin
+        // (SRV-006). The route stays public for LIVE gigs / anonymous callers.
+        const caller = (ctx as RouteContext).user;
+        return await gigsService.getGig(
+          id,
+          false,
+          caller ? { userId: caller.userId, role: caller.role } : undefined
+        );
       },
       {
         params: t.Object({

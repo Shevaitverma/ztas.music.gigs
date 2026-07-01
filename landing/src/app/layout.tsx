@@ -18,60 +18,50 @@ const geistMono = Geist_Mono({
   preload: true,
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ztsmusic.com";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://gigs.ztas.in";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "ZTS Music | Book Live Musicians & Artists for Your Events",
-    template: "%s | ZTS Music",
+    default: "ZTS Gigs | Book Live Musicians & Artists across India",
+    template: "%s | ZTS Gigs",
   },
   description:
-    "ZTS Music connects venues and event organizers with talented musicians. Find live bands, DJs, soloists, and acoustic artists for your next event. Post gigs, discover talent, and book performances easily.",
+    "ZTS Gigs is an early-access marketplace for live music in India. Post a gig, get quotes from local artists and bands, compare proposals, and book the right act for weddings, parties, cafes, and corporate events.",
   keywords: [
-    "live music booking",
-    "book musicians",
+    "live music booking India",
+    "book musicians India",
     "hire DJ",
     "live band for events",
     "music gig marketplace",
-    "artist booking platform",
-    "venue entertainment",
     "wedding musicians",
+    "sangeet band",
     "corporate event music",
+    "book artists Mumbai",
     "live performance booking",
   ],
-  authors: [{ name: "ZTS Music", url: siteUrl }],
-  creator: "ZTS Music",
-  publisher: "ZTS Music",
+  authors: [{ name: "ZTS Gigs", url: siteUrl }],
+  creator: "ZTS Gigs",
+  publisher: "ZTS Gigs",
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
   openGraph: {
-    title: "ZTS Music | Book Live Musicians & Artists for Your Events",
+    title: "ZTS Gigs | Book Live Musicians & Artists across India",
     description:
-      "Connect with talented musicians for your events. Find live bands, DJs, soloists, and more. The easiest way to book live entertainment.",
+      "An early-access marketplace for live music in India. Post a gig, get quotes from local artists, and book the right act for your event.",
     url: siteUrl,
-    siteName: "ZTS Music",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "ZTS Music - Book Live Musicians",
-      },
-    ],
-    locale: "en_US",
+    siteName: "ZTS Gigs",
+    locale: "en_IN",
     type: "website",
   },
   twitter: {
-    card: "summary_large_image",
-    title: "ZTS Music | Book Live Musicians & Artists",
+    card: "summary",
+    title: "ZTS Gigs | Book Live Musicians & Artists across India",
     description:
-      "Connect with talented musicians for your events. The easiest way to book live entertainment.",
-    images: ["/og-image.png"],
-    creator: "@ztsmusic",
+      "An early-access marketplace for live music in India. Post a gig, get quotes, and book the right act for your event.",
   },
   robots: {
     index: true,
@@ -102,57 +92,39 @@ export const viewport: Viewport = {
   ],
 };
 
-// JSON-LD structured data for SEO
+// JSON-LD structured data for SEO.
+// Note: no aggregateRating/review schema — we have no genuine reviews yet, and
+// fabricated review markup violates Google's structured-data policies.
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "ZTS Music",
+  name: "ZTS Gigs",
   description:
-    "A marketplace connecting venues and event organizers with talented musicians for live performances.",
+    "An early-access marketplace connecting event organisers with live musicians and bands across India.",
   url: siteUrl,
   applicationCategory: "Entertainment",
   operatingSystem: "Web",
   offers: {
     "@type": "Offer",
     price: "0",
-    priceCurrency: "USD",
-    description: "Free to browse and post gigs",
-  },
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: "4.8",
-    ratingCount: "1250",
-    bestRating: "5",
-    worstRating: "1",
+    priceCurrency: "INR",
+    description:
+      "Free to join and post gigs. The platform charges a commission only on completed bookings.",
   },
   creator: {
     "@type": "Organization",
-    name: "ZTS Music",
+    name: "ZTS Gigs",
     url: siteUrl,
-    logo: `${siteUrl}/logo.png`,
-    sameAs: [
-      "https://twitter.com/ztsmusic",
-      "https://www.instagram.com/ztsmusic",
-    ],
   },
 };
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: "ZTS Music",
+  name: "ZTS Gigs",
   url: siteUrl,
-  logo: `${siteUrl}/logo.png`,
-  description: "The leading platform for booking live musicians and artists for events.",
-  sameAs: [
-    "https://twitter.com/ztsmusic",
-    "https://www.instagram.com/ztsmusic",
-  ],
-  contactPoint: {
-    "@type": "ContactPoint",
-    contactType: "Customer Support",
-    email: "support@ztsmusic.com",
-  },
+  description:
+    "An early-access marketplace for booking live musicians and bands for events across India.",
 };
 
 export default function RootLayout({
@@ -161,7 +133,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en-IN" className="dark">
       <head>
         <script
           type="application/ld+json"

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { APP_URL, SIGNUP_URL } from "@/lib/links";
 
 export function CtaSection() {
   const [visible, setVisible] = useState(false);
@@ -27,7 +28,7 @@ export function CtaSection() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="relative py-24 sm:py-32">
+    <section ref={sectionRef} id="early-access" className="relative py-24 sm:py-32">
       {/* Background */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-[#0c0515]" />
@@ -69,7 +70,7 @@ export function CtaSection() {
               }}
             >
               <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-              Free to Post Gigs - No Hidden Fees
+              Free to join • Pay only when you book
             </div>
 
             <h2
@@ -86,15 +87,15 @@ export function CtaSection() {
             </h2>
 
             <p
-              className="mx-auto mt-4 max-w-xl text-base text-white/70"
+              className="mx-auto mt-4 max-w-xl text-base text-white/80"
               style={{
                 opacity: visible ? 1 : 0,
                 transform: visible ? "translateY(0)" : "translateY(20px)",
                 transition: "opacity 0.5s ease 0.4s, transform 0.5s ease 0.4s",
               }}
             >
-              Join thousands of venues and artists already using ZTS Music to
-              connect, book, and perform unforgettable live shows.
+              Be one of the first organisers and artists on ZTS Gigs. Post a gig,
+              get quotes from local talent, and book the right act for your event.
             </p>
 
             <div
@@ -105,34 +106,34 @@ export function CtaSection() {
                 transition: "opacity 0.5s ease 0.5s, transform 0.5s ease 0.5s",
               }}
             >
-              <Link href="https://app.ztsmusic.com/gigs/new">
-                <Button
-                  size="lg"
-                  className="group h-12 bg-white text-purple-700 hover:bg-white/90 font-semibold px-6"
-                >
-                  Post a Gig
+              <Button
+                asChild
+                size="lg"
+                className="group h-12 bg-white text-purple-700 hover:bg-white/90 font-semibold px-6"
+              >
+                <Link href={SIGNUP_URL}>
+                  Get early access
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </Link>
-              <Link href="https://app.ztsmusic.com">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-12 border-white/20 bg-white/5 text-white hover:bg-white/10 px-6"
-                >
-                  Browse Artists
-                </Button>
-              </Link>
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-12 border-white/20 bg-white/5 text-white hover:bg-white/10 px-6"
+              >
+                <Link href={APP_URL}>Explore the app</Link>
+              </Button>
             </div>
 
             <p
-              className="mt-6 text-xs text-white/50"
+              className="mt-6 text-xs text-white/60"
               style={{
                 opacity: visible ? 1 : 0,
                 transition: "opacity 0.5s ease 0.6s",
               }}
             >
-              No credit card required • Free to get started • Book in minutes
+              Free to join • No upfront cost • Now onboarding in India
             </p>
           </div>
         </div>

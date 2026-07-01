@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useEffect, useState, useRef, useCallback } from "react";
+import { SIGNUP_URL } from "@/lib/links";
 
 // Shared orbit positions - artists and venues use the same slots so swapping is seamless
 const orbitSlots = [
@@ -91,8 +92,11 @@ export function HeroSection() {
     phaseRef.current = phase;
   }, [phase]);
 
-  // Set mounted on client
+  // Set mounted on client. This intentional one-time setState guards against an
+  // SSR hydration mismatch: positions render statically on the server and switch
+  // to the animated values only after mount.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -222,51 +226,42 @@ export function HeroSection() {
           <div className="hero-text">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1">
               <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-xs text-purple-300">Live gigs available now</span>
+              <span className="text-xs text-purple-300">Early access — now onboarding in India</span>
             </div>
 
             <h1 className="font-sans text-4xl font-bold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-[3.5rem]">
-              Book Top Talent
+              Post a gig.
               <br />
               <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                One Click Away
+                Get quotes from real artists.
               </span>
             </h1>
 
-            <p className="mt-5 max-w-md text-base leading-relaxed text-white/50">
-              Connect with musicians, DJs, and performers for your next event. Simple booking, verified artists, unforgettable experiences.
+            <p className="mt-5 max-w-md text-base leading-relaxed text-white/70">
+              Share your event and budget, and let musicians, bands, and DJs send you
+              proposals. Compare quotes, chat, and book the act that fits — all in one place.
             </p>
 
             <div className="mt-8 flex items-center gap-4">
-              <Link href="https://app.ztsmusic.com/register">
-                <Button
-                  size="lg"
-                  className="group h-12 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-6 text-white shadow-lg shadow-purple-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/30 hover:brightness-110"
-                >
-                  Join Now
+              <Button
+                asChild
+                size="lg"
+                className="group h-12 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-6 text-white shadow-lg shadow-purple-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/30 hover:brightness-110"
+              >
+                <Link href={SIGNUP_URL}>
+                  Get early access
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                </Button>
-              </Link>
-              <Link href="#how-it-works">
-                <Button variant="ghost" size="lg" className="h-12 text-white/60 hover:bg-white/5 hover:text-white">
-                  How it works
-                </Button>
-              </Link>
+                </Link>
+              </Button>
+              <Button asChild variant="ghost" size="lg" className="h-12 text-white/70 hover:bg-white/5 hover:text-white">
+                <Link href="#how-it-works">How it works</Link>
+              </Button>
             </div>
 
-            <div className="mt-10 flex items-center gap-6">
-              <div className="flex -space-x-2">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-8 w-8 overflow-hidden rounded-full border-2 border-[#0c0515]">
-                    <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="" className="h-full w-full object-cover" />
-                  </div>
-                ))}
-              </div>
-              <div className="text-sm">
-                <span className="font-semibold text-white">2,500+</span>
-                <span className="text-white/40"> artists joined this month</span>
-              </div>
-            </div>
+            <p className="mt-10 max-w-md text-sm leading-relaxed text-white/60">
+              We&rsquo;re onboarding our first artists and organisers in Mumbai, with more
+              cities coming soon. Join now to help shape what we build.
+            </p>
           </div>
 
           {/* Right side - Orbit */}
@@ -438,23 +433,13 @@ export function HeroSection() {
                 );
               })}
 
-              {/* Stats */}
-              <div className="absolute -bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/10 bg-black/50 px-5 py-2.5 backdrop-blur-md">
-                <div className="flex items-center gap-4">
-                  <div className="text-center">
-                    <div className="text-base font-bold text-white">5k+</div>
-                    <div className="text-[9px] text-white/40">Artists</div>
-                  </div>
-                  <div className="h-6 w-px bg-white/10" />
-                  <div className="text-center">
-                    <div className="text-base font-bold text-white">2k+</div>
-                    <div className="text-[9px] text-white/40">Venues</div>
-                  </div>
-                  <div className="h-6 w-px bg-white/10" />
-                  <div className="text-center">
-                    <div className="text-base font-bold text-white">10k+</div>
-                    <div className="text-[9px] text-white/40">Gigs</div>
-                  </div>
+              {/* Early-access label */}
+              <div className="absolute -bottom-4 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/10 bg-black/50 px-5 py-2.5 backdrop-blur-md">
+                <div className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-xs font-medium text-white/80">
+                    Now onboarding in Mumbai
+                  </span>
                 </div>
               </div>
             </div>

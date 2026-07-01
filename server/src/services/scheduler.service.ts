@@ -1,5 +1,5 @@
-import { GigModel, BidModel, NotificationModel, NotificationType } from '../db/models';
-import { GigStatus, BidStatus } from '../shared/enums';
+import { GigModel, BidModel, NotificationModel, NotificationType, EventCheckInModel } from '../db/models';
+import { GigStatus, BidStatus, CheckInStatus } from '../shared/enums';
 
 /**
  * Scheduler Service
@@ -244,65 +244,124 @@ export class SchedulerService {
    */
   async autoCompleteGigs(): Promise<void> {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Lower bound on the sweep window: after 30 days an unconfirmed gig ages out
+    // of the candidate set so we don't re-scan it (and re-query its check-in)
+    // on every tick forever. Anything older needs manual/admin resolution.
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    // Find BOOKED or CLOSED gigs where the event date was more than 24 hours ago
+    // Candidates: actually-booked gigs (have an accepted artist) whose event was
+    // 24h–30d ago. Requiring `acceptedArtist` excludes auto-closed *unbooked*
+    // expired gigs — they had no performer and must never be marked COMPLETED.
     const gigsToComplete = await GigModel.find({
       status: { $in: [GigStatus.BOOKED, GigStatus.CLOSED] },
-      'eventTiming.date': { $lt: twentyFourHoursAgo },
+      acceptedArtist: { $exists: true, $ne: null },
+      'eventTiming.date': { $lt: twentyFourHoursAgo, $gte: thirtyDaysAgo },
     })
-      .select('_id postedBy acceptedArtist title')
+      .select('_id postedBy acceptedArtist title status')
       .lean()
       .exec();
 
+    let completed = 0;
+    let flaggedForReview = 0;
+
     for (const gig of gigsToComplete) {
-      await GigModel.updateOne({ _id: gig._id }, { status: GigStatus.COMPLETED });
+      // SECURITY (SRV-007): the OTP dual end-event confirmation is the ground
+      // truth that "this gig actually happened". The timer must NOT mark a gig
+      // COMPLETED unless both parties confirmed the event ended — COMPLETED
+      // opens two-way reviews today and, once escrow is wired, would AUTO-RELEASE
+      // funds. So only EVENT_ENDED check-ins are auto-completed; any other state
+      // means the event was never confirmed, and the gig is moved to CLOSED for
+      // manual review instead. When payments exist, this branch must open a
+      // dispute / hold escrow — never release on the timer path.
+      const checkIn = await EventCheckInModel.findOne({ gig: gig._id })
+        .select('status')
+        .lean()
+        .exec();
 
-      // Notify both client and artist
-      const notifications = [];
+      if (checkIn?.status === CheckInStatus.EVENT_ENDED) {
+        await GigModel.updateOne({ _id: gig._id }, { status: GigStatus.COMPLETED });
+        completed++;
 
-      if (gig.postedBy) {
-        const existingClient = await NotificationModel.findOne({
-          userId: gig.postedBy,
-          type: NotificationType.GIG_AUTO_COMPLETED,
-          'data.gigId': gig._id.toString(),
-        });
+        // Notify both client and artist
+        const notifications = [];
 
-        if (!existingClient) {
-          notifications.push({
+        if (gig.postedBy) {
+          const existingClient = await NotificationModel.findOne({
             userId: gig.postedBy,
             type: NotificationType.GIG_AUTO_COMPLETED,
-            title: 'Gig Completed',
-            message: `Your gig "${gig.title}" has been marked as completed. Don't forget to leave a review!`,
-            data: { gigId: gig._id.toString() },
+            'data.gigId': gig._id.toString(),
           });
+
+          if (!existingClient) {
+            notifications.push({
+              userId: gig.postedBy,
+              type: NotificationType.GIG_AUTO_COMPLETED,
+              title: 'Gig Completed',
+              message: `Your gig "${gig.title}" has been marked as completed. Don't forget to leave a review!`,
+              data: { gigId: gig._id.toString() },
+            });
+          }
         }
-      }
 
-      if (gig.acceptedArtist) {
-        const existingArtist = await NotificationModel.findOne({
-          userId: gig.acceptedArtist,
-          type: NotificationType.GIG_AUTO_COMPLETED,
-          'data.gigId': gig._id.toString(),
-        });
-
-        if (!existingArtist) {
-          notifications.push({
+        if (gig.acceptedArtist) {
+          const existingArtist = await NotificationModel.findOne({
             userId: gig.acceptedArtist,
             type: NotificationType.GIG_AUTO_COMPLETED,
-            title: 'Gig Completed',
-            message: `Your performance at "${gig.title}" has been marked as completed. Great job!`,
-            data: { gigId: gig._id.toString() },
+            'data.gigId': gig._id.toString(),
           });
-        }
-      }
 
-      if (notifications.length > 0) {
-        await NotificationModel.insertMany(notifications);
+          if (!existingArtist) {
+            notifications.push({
+              userId: gig.acceptedArtist,
+              type: NotificationType.GIG_AUTO_COMPLETED,
+              title: 'Gig Completed',
+              message: `Your performance at "${gig.title}" has been marked as completed. Great job!`,
+              data: { gigId: gig._id.toString() },
+            });
+          }
+        }
+
+        if (notifications.length > 0) {
+          await NotificationModel.insertMany(notifications);
+        }
+      } else if (gig.status === GigStatus.BOOKED) {
+        // A booked event whose date passed WITHOUT a confirmed end-of-event
+        // check-in. Do NOT complete (that would open reviews and, once escrow is
+        // wired, release funds). Downgrade to CLOSED (manual-review state) and
+        // notify the client once. Gigs that are ALREADY CLOSED are intentionally
+        // left untouched here — they were closed via the normal flow, so we
+        // don't re-transition or send a misleading "no check-in" notice; they
+        // remain completable via the OTP flow or the manual complete endpoint.
+        await GigModel.updateOne({ _id: gig._id }, { status: GigStatus.CLOSED });
+        flaggedForReview++;
+
+        if (gig.postedBy) {
+          const existing = await NotificationModel.findOne({
+            userId: gig.postedBy,
+            type: NotificationType.GIG_AUTO_CLOSED,
+            'data.gigId': gig._id.toString(),
+          });
+
+          if (!existing) {
+            await NotificationModel.create({
+              userId: gig.postedBy,
+              type: NotificationType.GIG_AUTO_CLOSED,
+              title: 'Event Confirmation Needed',
+              message: `Your booked gig "${gig.title}" passed its event date without a confirmed end-of-event check-in. Please confirm the event so it can be completed.`,
+              data: { gigId: gig._id.toString() },
+            });
+          }
+        }
       }
     }
 
-    if (gigsToComplete.length > 0) {
-      console.log(`[Scheduler] Auto-completed ${gigsToComplete.length} gigs`);
+    if (completed > 0) {
+      console.log(`[Scheduler] Auto-completed ${completed} confirmed gigs`);
+    }
+    if (flaggedForReview > 0) {
+      console.log(
+        `[Scheduler] Flagged ${flaggedForReview} unconfirmed gigs for manual review (not completed)`
+      );
     }
   }
 }

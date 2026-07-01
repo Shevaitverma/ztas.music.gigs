@@ -51,8 +51,13 @@ export default function LoginPage() {
 
     setUser(response.user)
     toast.success(`Welcome, ${response.user.name}`)
+    // Only allow same-origin relative redirects (ADM-003). `startsWith('/')`
+    // alone is true for protocol-relative `//evil.com` (and `/\evil.com`),
+    // which the router resolves to a foreign origin — a post-auth open redirect.
     const next = searchParams.get('next')
-    router.replace(next && next.startsWith('/') ? next : '/')
+    const safeNext =
+      next && next.startsWith('/') && next[1] !== '/' && next[1] !== '\\' ? next : '/'
+    router.replace(safeNext)
     router.refresh()
   }
 

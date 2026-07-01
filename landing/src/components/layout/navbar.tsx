@@ -6,6 +6,7 @@ import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { LOGIN_URL, SIGNUP_URL } from "@/lib/links";
 
 interface NavLink {
   href: string;
@@ -13,10 +14,10 @@ interface NavLink {
 }
 
 const navLinks: NavLink[] = [
-  { href: "#features", label: "For Artists" },
-  { href: "#how-it-works", label: "For Venues" },
+  { href: "#features", label: "Features" },
+  { href: "#how-it-works", label: "How it works" },
   { href: "#pricing", label: "Pricing" },
-  { href: "#testimonials", label: "About" },
+  { href: "#why", label: "Why ZTS" },
 ];
 
 export function Navbar() {
@@ -73,29 +74,30 @@ export function Navbar() {
         </div>
 
         <div className="hidden items-center gap-4 md:flex">
-          <Link href="https://app.ztsmusic.com/login">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-sm font-medium text-white/70 hover:bg-transparent hover:text-white"
-            >
-              Log In
-            </Button>
-          </Link>
-          <Link href="https://app.ztsmusic.com/register">
-            <Button
-              size="sm"
-              className="rounded-full bg-white/10 px-5 text-sm font-medium text-white backdrop-blur-sm transition-all duration-200 hover:bg-white/20"
-            >
-              Join Now
-            </Button>
-          </Link>
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="text-sm font-medium text-white/70 hover:bg-transparent hover:text-white"
+          >
+            <Link href={LOGIN_URL}>Log In</Link>
+          </Button>
+          <Button
+            asChild
+            size="sm"
+            className="rounded-full bg-white/10 px-5 text-sm font-medium text-white backdrop-blur-sm transition-all duration-200 hover:bg-white/20"
+          >
+            <Link href={SIGNUP_URL}>Get early access</Link>
+          </Button>
         </div>
 
         <Button
           variant="ghost"
           size="icon"
           className="text-white hover:bg-white/10 md:hidden"
+          aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMobileMenuOpen}
+          aria-controls="mobile-menu"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           {isMobileMenuOpen ? (
@@ -107,6 +109,7 @@ export function Navbar() {
       </nav>
 
       <div
+        id="mobile-menu"
         className={cn(
           "overflow-hidden bg-white/[0.02] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-300 md:hidden",
           isMobileMenuOpen ? "max-h-[400px] border-b border-white/[0.08]" : "max-h-0"
@@ -124,23 +127,25 @@ export function Navbar() {
             </Link>
           ))}
           <div className="mt-4 flex flex-col gap-2 border-t border-white/10 pt-4">
-            <Link href="https://app.ztsmusic.com/login">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-center text-white/70 hover:bg-white/5 hover:text-white"
-              >
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="w-full justify-center text-white/70 hover:bg-white/5 hover:text-white"
+            >
+              <Link href={LOGIN_URL} onClick={() => setIsMobileMenuOpen(false)}>
                 Log In
-              </Button>
-            </Link>
-            <Link href="https://app.ztsmusic.com/register">
-              <Button
-                size="sm"
-                className="w-full justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-              >
-                Join Now
-              </Button>
-            </Link>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="sm"
+              className="w-full justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+            >
+              <Link href={SIGNUP_URL} onClick={() => setIsMobileMenuOpen(false)}>
+                Get early access
+              </Link>
+            </Button>
           </div>
         </div>
       </div>

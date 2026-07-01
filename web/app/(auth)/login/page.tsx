@@ -33,10 +33,21 @@ interface PendingSignup {
   providerProfile: ProviderProfile
 }
 
+/**
+ * Only allow same-origin relative redirect targets after login (WEB-004).
+ * Rejects absolute URLs (`https://evil`) and protocol-relative/backslash
+ * variants (`//evil`, `/\evil`) that browsers resolve to a foreign origin.
+ */
+function sanitizeNext(next: string | null): string | null {
+  if (!next || !next.startsWith('/')) return null
+  if (next.length > 1 && (next[1] === '/' || next[1] === '\\')) return null
+  return next
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('next')
+  const redirectTo = sanitizeNext(searchParams.get('next'))
   const { login } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [firebaseState, setFirebaseState] = useState<FirebaseState>({

@@ -240,6 +240,110 @@ export class AuthService {
   }
 
   /**
+   * Verify a Firebase PHONE ID token and authenticate the user (SRV-002).
+   *
+   * Mirrors verifyGoogleToken but for phone-OTP sign-in — the primary India
+   * onboarding path. A Firebase phone token carries `phone_number` rather than
+   * an email, so account linking falls back on phoneNumber and new users are
+   * created with `authProvider = PHONE`. New users without a role get the same
+   * structured signup challenge (the signupToken/claims already carry
+   * phoneNumber + provider, and completeSignup looks users up by phoneNumber).
+   */
+  async verifyPhoneToken(dto: {
+    idToken: string;
+    role?: UserRole;
+    name?: string;
+  }): Promise<FirebaseVerifyResult> {
+    try {
+      const decodedToken = await firebaseAdminService.verifyIdToken(dto.idToken);
+      const phoneNumber = (decodedToken as { phone_number?: string }).phone_number;
+
+      let user = await UserModel.findOne({ firebaseUid: decodedToken.uid }).exec();
+
+      // Fallback: bind by phone number, only if not yet linked to a firebaseUid.
+      if (!user && phoneNumber) {
+        user = await UserModel.findOne({ phoneNumber }).exec();
+        if (user) {
+          if (user.firebaseUid && user.firebaseUid !== decodedToken.uid) {
+            authLogger.warn('Phone already linked to a different firebaseUid; refusing silent rebind', {
+              userId: user._id.toString(),
+            });
+            throw new UnauthorizedException(
+              'This phone number is already linked to another account. Contact support to re-link.'
+            );
+          }
+          user.firebaseUid = decodedToken.uid;
+          user.authProvider = AuthProvider.PHONE;
+          await user.save();
+        }
+      }
+
+      if (!user) {
+        // No existing user. Without a valid signup role, surface the structured
+        // "needs role" challenge rather than throwing (frontend → role picker).
+        if (!dto.role || !SIGNUP_ALLOWED_ROLES.has(dto.role)) {
+          authLogger.info('Phone-verified user has no role yet; issuing signup challenge', {
+            uid: decodedToken.uid,
+          });
+          const displayName = dto.name || (decodedToken.name as string | undefined);
+          return {
+            requiresRole: true,
+            claims: {
+              type: 'signup',
+              uid: decodedToken.uid,
+              phoneNumber,
+              name: displayName,
+              picture: decodedToken.picture,
+              provider: AuthProvider.PHONE,
+            },
+            providerProfile: {
+              phoneNumber,
+              displayName,
+              profilePicture: decodedToken.picture,
+            },
+          };
+        }
+
+        user = await UserModel.create({
+          firebaseUid: decodedToken.uid,
+          phoneNumber,
+          name: dto.name || (decodedToken.name as string | undefined),
+          profilePicture: decodedToken.picture,
+          role: dto.role,
+          authProvider: AuthProvider.PHONE,
+          status: UserStatus.ACTIVE,
+          joinedAt: new Date(),
+          lastLogin: new Date(),
+        });
+
+        authLogger.info('New user created with phone authentication', {
+          userId: user._id.toString(),
+        });
+      } else {
+        user.lastLogin = new Date();
+        await user.save();
+        authLogger.info('User logged in (phone)', { userId: user._id.toString() });
+      }
+
+      this.validateUserStatus(user);
+
+      return {
+        requiresRole: false,
+        user,
+        firebaseUid: decodedToken.uid,
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
+        throw error;
+      }
+      authLogger.warn('Firebase phone verification failed', {
+        code: (error as { code?: string })?.code,
+      });
+      throw new UnauthorizedException('Invalid or expired phone token');
+    }
+  }
+
+  /**
    * Complete signup using a previously-issued signupToken (verified upstream by
    * the route handler). Creates the user with the chosen role and returns the
    * fresh user record. The route layer mints the access/refresh pair.

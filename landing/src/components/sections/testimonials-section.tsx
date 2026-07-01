@@ -1,69 +1,51 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import Image from "next/image";
-import { Star, Quote } from "lucide-react";
+// Repurposed from a "testimonials" section. We're pre-launch, so there are no
+// real customers to quote yet — fabricated reviews would be deceptive. Instead
+// this section honestly explains what we're building and invites early users.
+// (Component name kept to avoid churn in the page composition.)
 
-interface Testimonial {
-  name: string;
-  role: string;
-  avatar: string;
+import { useEffect, useRef, useState, useCallback } from "react";
+import Link from "next/link";
+import { MapPin, Music2, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SIGNUP_URL } from "@/lib/links";
+
+interface Reason {
+  icon: React.ReactNode;
+  title: string;
   content: string;
 }
 
-const testimonials: Testimonial[] = [
+const reasons: Reason[] = [
   {
-    name: "Priya Sharma",
-    role: "Venue Owner, Mumbai",
-    avatar: "https://i.pravatar.cc/100?img=1",
+    icon: <MapPin className="h-5 w-5" />,
+    title: "Built for India",
     content:
-      "ZTS Music made booking live acts so simple. I posted a gig and had 15 quality applications within 24 hours.",
+      "INR pricing, local genres, and a city-first rollout. We're starting in Mumbai and onboarding artists and organisers from there.",
   },
   {
-    name: "Rahul Verma",
-    role: "Wedding Planner",
-    avatar: "https://i.pravatar.cc/100?img=3",
+    icon: <Music2 className="h-5 w-5" />,
+    title: "A fair deal for artists",
     content:
-      "Finding the perfect sangeet band used to take weeks. Now I book verified artists in days.",
+      "Set your own rate, keep your profile, and get discovered for gigs that fit you — no agents, no cold calls, no monthly fee.",
   },
   {
-    name: "Anjali Desai",
-    role: "Solo Vocalist",
-    avatar: "https://i.pravatar.cc/100?img=5",
+    icon: <ShieldCheck className="h-5 w-5" />,
+    title: "Confidence for organisers",
     content:
-      "As a freelance singer, getting gigs was uncertain. ZTS Music gives me steady opportunities that match my style.",
-  },
-  {
-    name: "Vikram Malhotra",
-    role: "Event Manager",
-    avatar: "https://i.pravatar.cc/100?img=8",
-    content:
-      "We book 20+ events monthly. The platform's filtering and verified reviews save us countless hours.",
-  },
-  {
-    name: "Meera Krishnan",
-    role: "Jazz Band Leader",
-    avatar: "https://i.pravatar.cc/100?img=9",
-    content:
-      "Our band's bookings tripled since joining. The direct communication with venues is exactly what we needed.",
-  },
-  {
-    name: "Arjun Nair",
-    role: "Restaurant Owner",
-    avatar: "https://i.pravatar.cc/100?img=12",
-    content:
-      "Live music transformed our restaurant's ambiance. ZTS helped us find affordable acoustic artists.",
+      "Compare real proposals before you commit. Escrow and OTP check-in are on the way, so payment will only release once the gig actually happens.",
   },
 ];
 
 function SpotlightCard({
-  testimonial,
+  reason,
   index,
   isVisible,
   mousePosition,
   containerRect,
 }: {
-  testimonial: Testimonial;
+  reason: Reason;
   index: number;
   isVisible: boolean;
   mousePosition: { x: number; y: number };
@@ -108,7 +90,7 @@ function SpotlightCard({
         }}
       />
       <div
-        className="relative h-full rounded-2xl border border-white/[0.06] p-5 overflow-hidden"
+        className="relative h-full rounded-2xl border border-white/[0.06] p-6 overflow-hidden"
         style={{ background: "rgba(12, 5, 21, 1)" }}
       >
         {/* Spotlight overlay for inner glow */}
@@ -120,49 +102,25 @@ function SpotlightCard({
             transition: "opacity 0.3s ease",
           }}
         />
-        {/* Quote icon */}
-        <Quote className="h-6 w-6 text-purple-500/20 mb-3" />
-
-        {/* Rating */}
-        <div className="flex gap-0.5 mb-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Star
-              key={i}
-              className="h-3.5 w-3.5 fill-amber-400/80 text-amber-400/80"
-            />
-          ))}
+        {/* Icon */}
+        <div className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 text-purple-400 ring-1 ring-white/10">
+          {reason.icon}
         </div>
 
         {/* Content */}
-        <p className="text-sm leading-relaxed text-white/60">
-          &ldquo;{testimonial.content}&rdquo;
+        <h3 className="relative mt-4 text-base font-semibold text-white">
+          {reason.title}
+        </h3>
+        <p className="relative mt-2 text-sm leading-relaxed text-white/70">
+          {reason.content}
         </p>
-
-        {/* Author */}
-        <div className="mt-4 flex items-center gap-3">
-          <Image
-            src={testimonial.avatar}
-            alt={testimonial.name}
-            width={36}
-            height={36}
-            className="rounded-full ring-1 ring-white/10"
-          />
-          <div>
-            <div className="text-sm font-medium text-white">
-              {testimonial.name}
-            </div>
-            <div className="text-xs text-white/40">
-              {testimonial.role}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
 }
 
 export function TestimonialsSection() {
-  const [visibleCards, setVisibleCards] = useState<boolean[]>(new Array(testimonials.length).fill(false));
+  const [visibleCards, setVisibleCards] = useState<boolean[]>(new Array(reasons.length).fill(false));
   const [headerVisible, setHeaderVisible] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [containerRect, setContainerRect] = useState<DOMRect | null>(null);
@@ -210,7 +168,7 @@ export function TestimonialsSection() {
   }, []);
 
   return (
-    <section ref={sectionRef} id="testimonials" className="relative py-24 sm:py-32">
+    <section ref={sectionRef} id="why" className="relative py-24 sm:py-32">
       {/* Background */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-[#0c0515]" />
@@ -237,36 +195,48 @@ export function TestimonialsSection() {
           }}
         >
           <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1 mb-4">
-            <span className="text-xs text-purple-300">Testimonials</span>
+            <span className="text-xs text-purple-300">Why ZTS Gigs</span>
           </div>
           <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Trusted by{" "}
+            Be among the{" "}
             <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Venues & Artists
+              first
             </span>
           </h2>
-          <p className="mt-4 text-base text-white/50">
-            See how venues and artists are using ZTS Music to create
-            unforgettable live music experiences.
+          <p className="mt-4 text-base text-white/60">
+            We&rsquo;re a new, India-first marketplace for live music. We don&rsquo;t have a
+            wall of reviews yet — what we have is a clear idea of how booking
+            should work, and room for early users to shape it.
           </p>
         </div>
 
-        {/* Testimonials Grid */}
+        {/* Reasons Grid */}
         <div
           ref={containerRef}
           onMouseMove={handleMouseMove}
           className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
-          {testimonials.map((testimonial, index) => (
+          {reasons.map((reason, index) => (
             <SpotlightCard
-              key={testimonial.name}
-              testimonial={testimonial}
+              key={reason.title}
+              reason={reason}
               index={index}
               isVisible={visibleCards[index]}
               mousePosition={mousePosition}
               containerRect={containerRect}
             />
           ))}
+        </div>
+
+        {/* Early-access nudge */}
+        <div className="mt-12 text-center">
+          <Button
+            asChild
+            size="lg"
+            className="h-12 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-6 text-white hover:brightness-110"
+          >
+            <Link href={SIGNUP_URL}>Get early access</Link>
+          </Button>
         </div>
       </div>
     </section>

@@ -11,31 +11,33 @@ interface Step {
   description: string;
 }
 
-const artistSteps: Step[] = [
+// Flow for clients / event organisers posting a gig.
+const clientSteps: Step[] = [
   {
     number: "01",
     icon: <FileText className="h-6 w-6" />,
     title: "Post Your Gig",
     description:
-      "Create a gig listing with your event details, budget, venue, and the type of artist you're looking for.",
+      "Create a gig brief with your event details, budget, location, and the type of act you're looking for.",
   },
   {
     number: "02",
     icon: <Users className="h-6 w-6" />,
-    title: "Review Applications",
+    title: "Compare Proposals",
     description:
-      "Talented artists will apply to your gig. Browse their profiles, listen to samples, and read reviews.",
+      "Artists send quotes and proposals. Browse their profiles, listen to samples, and shortlist your favourites.",
   },
   {
     number: "03",
     icon: <Calendar className="h-6 w-6" />,
     title: "Book & Perform",
     description:
-      "Accept the perfect artist, confirm the booking, and enjoy an amazing live performance at your event.",
+      "Pick the right act, confirm the booking, and check them in with an OTP at your event.",
   },
 ];
 
-const venueSteps: Step[] = [
+// Flow for artists looking for gigs.
+const artistSteps: Step[] = [
   {
     number: "01",
     icon: <Search className="h-6 w-6" />,
@@ -46,21 +48,21 @@ const venueSteps: Step[] = [
   {
     number: "02",
     icon: <MessageSquare className="h-6 w-6" />,
-    title: "Apply & Negotiate",
+    title: "Send a Proposal",
     description:
-      "Send a proposal with your rate. Chat directly with the organizer to fine-tune the booking details.",
+      "Pitch your rate and details. Chat directly with the organiser to fine-tune the booking.",
   },
   {
     number: "03",
     icon: <CheckCircle2 className="h-6 w-6" />,
-    title: "Get Paid",
+    title: "Perform & Get Paid",
     description:
-      "Funds are held in escrow on booking and released after a verified OTP check-in at the event.",
+      "Confirm the booking and play the gig. We're building escrow with OTP check-in so payment is released once you've performed (rolling out during the beta).",
   },
 ];
 
 export function HowItWorksSection() {
-  const [visibleSteps, setVisibleSteps] = useState<boolean[]>(new Array(artistSteps.length).fill(false));
+  const [visibleSteps, setVisibleSteps] = useState<boolean[]>(new Array(clientSteps.length).fill(false));
   const [headerVisible, setHeaderVisible] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -142,14 +144,17 @@ export function HowItWorksSection() {
               Live Show
             </span>
           </h2>
-          <p className="mt-4 text-base text-white/50">
-            Our streamlined process makes booking live music simple, whether
-            you're a venue owner, event planner, or hosting a private party.
+          <p className="mt-4 text-base text-white/60">
+            A simple flow for both sides of the booking — whether you&rsquo;re an
+            organiser hosting an event or an artist looking for your next gig.
           </p>
         </div>
 
-        {/* Steps */}
-        <div className="mt-20">
+        {/* For Organisers */}
+        <h3 className="mt-20 mb-12 text-center text-2xl font-bold text-foreground">
+          For <span className="text-gradient">Organisers</span>
+        </h3>
+        <div className="mt-4">
           <div className="relative">
             {/* Connecting line */}
             <div className="absolute left-1/2 top-0 hidden h-full w-px -translate-x-1/2 lg:block">
@@ -157,7 +162,7 @@ export function HowItWorksSection() {
             </div>
 
             <div className="space-y-16 lg:space-y-24">
-              {artistSteps.map((step, index) => (
+              {clientSteps.map((step, index) => (
                 <div
                   key={step.number}
                   data-index={index}
@@ -205,7 +210,7 @@ export function HowItWorksSection() {
           </div>
         </div>
 
-        {/* For Venue Owners */}
+        {/* For Artists */}
         <div className="mt-24 lg:mt-32">
           <motion.h3
             initial={{ opacity: 0, y: 20 }}
@@ -213,11 +218,11 @@ export function HowItWorksSection() {
             viewport={{ once: true }}
             className="mb-12 text-center text-2xl font-bold text-foreground"
           >
-            For <span className="text-gradient">Venue Owners</span>
+            For <span className="text-gradient">Artists</span>
           </motion.h3>
           <div className="relative">
             <div className="space-y-12 lg:space-y-16">
-              {venueSteps.map((step, index) => (
+              {artistSteps.map((step, index) => (
                 <motion.div
                   key={step.number}
                   initial={{ opacity: 0, y: 40 }}

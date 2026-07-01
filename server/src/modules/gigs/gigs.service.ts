@@ -5,8 +5,9 @@ import {
   BadRequestException,
   ConflictException,
 } from '../../plugins/error.plugin';
-import { GigStatus, BidStatus, ApplicationStatus, CheckInStatus } from '../../shared/enums';
+import { GigStatus, BidStatus, ApplicationStatus, CheckInStatus, UserRole } from '../../shared/enums';
 import { s3Service } from '../../services/s3.service';
+import { escapeRegex } from '../../shared/utils/validation.utils';
 
 /**
  * Valid gig status transitions
@@ -136,8 +137,21 @@ export class GigsService {
 
   /**
    * Get Gig by ID
+   *
+   * SECURITY (SRV-006): a non-LIVE gig is not publicly fetchable by id (a direct
+   * fetch must not leak what `searchGigs` — LIVE-only for non-owners — already
+   * hides, e.g. an unpublished DRAFT's venue address). It stays visible only to
+   * the people who legitimately need it: the owner, an admin, the accepted
+   * artist, and any artist who placed a bid (so booked artists can still see the
+   * venue/time they must perform at, and bidders can open their own bid). A
+   * DRAFT has no bids, so this keeps unpublished listings owner/admin-only.
+   * Everyone else gets a 404.
    */
-  async getGig(id: string, incrementView = false): Promise<any> {
+  async getGig(
+    id: string,
+    incrementView = false,
+    caller?: { userId: string; role: UserRole }
+  ): Promise<any> {
     const gig = await GigModel.findById(id)
       .populate('postedBy', 'name profilePicture clientProfile')
       .lean()
@@ -145,6 +159,28 @@ export class GigsService {
 
     if (!gig) {
       throw new NotFoundException('Gig not found');
+    }
+
+    if (gig.status !== GigStatus.LIVE) {
+      const ownerId = (gig.postedBy as any)?._id?.toString() ?? (gig.postedBy as any)?.toString();
+      // acceptedArtist/acceptedApplicant are raw ObjectIds here (not populated).
+      const acceptedArtistId = (
+        (gig as any).acceptedArtist ?? (gig as any).acceptedApplicant
+      )?.toString();
+      const isOwner = !!caller && ownerId === caller.userId;
+      const isAdmin = caller?.role === UserRole.ADMIN;
+      const isAcceptedArtist =
+        !!caller && !!acceptedArtistId && acceptedArtistId === caller.userId;
+
+      let isBidder = false;
+      if (caller && !isOwner && !isAdmin && !isAcceptedArtist) {
+        isBidder = !!(await BidModel.exists({ gigId: gig._id, artistId: caller.userId }));
+      }
+
+      if (!isOwner && !isAdmin && !isAcceptedArtist && !isBidder) {
+        // Do not reveal existence of non-public gigs to non-participants.
+        throw new NotFoundException('Gig not found');
+      }
     }
 
     // Increment view count atomically if requested (prevents race condition)
@@ -530,7 +566,10 @@ export class GigsService {
 
     // Filters
     if (params.city) {
-      filter['venue.city'] = { $regex: params.city, $options: 'i' };
+      // SECURITY (SRV-005): escape user input before using it as a Mongo regex
+      // on this unauthenticated endpoint, otherwise a crafted pattern (nested
+      // quantifiers) can cause catastrophic backtracking / CPU exhaustion.
+      filter['venue.city'] = { $regex: escapeRegex(params.city), $options: 'i' };
     }
 
     // Budget filter - find gigs where the budget range overlaps with user's range

@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import type { SignupTokenClaims } from './auth.service';
 import {
   GoogleAuthSchema,
+  PhoneAuthSchema,
   LoginSchema,
   RefreshTokenSchema,
   CompleteSignupSchema,
@@ -114,6 +115,100 @@ export const authRoutes = (authService: AuthService) =>
           tags: ['Auth'],
           summary: 'Verify Google Sign-In',
           description: 'Verify Firebase Google ID token and authenticate user',
+        },
+      }
+    )
+
+    /**
+     * Phone (OTP) Sign-In Verification (Public) — SRV-002.
+     *
+     * Mirrors /google/verify for Firebase phone-OTP login (the primary India
+     * onboarding path). The Firebase ID token is read from the `X-Firebase-Token`
+     * header (documented contract) or body `idToken`. New users without a role
+     * get the same structured signup challenge as the Google path.
+     */
+    .post(
+      '/phone/verify',
+      async (ctx) => {
+        const context = ctx as RouteContext;
+        const { body } = context;
+        const jwt = context.jwt!;
+        const refreshJwt = context.refreshJwt!;
+        const signupJwt = (ctx as any).signupJwt as {
+          sign: (payload: unknown) => Promise<string>;
+        };
+
+        const bodyTyped = (body ?? {}) as { idToken?: string; role?: UserRole; name?: string };
+        // Header takes precedence (documented contract); fall back to body.
+        const headerToken = context.headers['x-firebase-token'];
+        const idToken = (typeof headerToken === 'string' && headerToken.length > 0)
+          ? headerToken
+          : bodyTyped.idToken;
+        if (!idToken) {
+          throw new UnauthorizedException(
+            'Firebase token required (X-Firebase-Token header or idToken body)'
+          );
+        }
+
+        const result = await authService.verifyPhoneToken({
+          idToken,
+          role: bodyTyped.role,
+          name: bodyTyped.name,
+        });
+
+        // No role yet → return signup challenge instead of access tokens.
+        if (result.requiresRole) {
+          const signupToken = await signupJwt.sign(result.claims);
+          return {
+            requiresRole: true,
+            signupToken,
+            providerProfile: result.providerProfile,
+          };
+        }
+
+        const accessPayload: JwtPayload = {
+          sub: result.user._id.toString(),
+          firebaseUid: result.firebaseUid,
+          email: result.user.email,
+          phoneNumber: result.user.phoneNumber,
+          role: result.user.role,
+          type: 'access',
+        };
+        const refreshPayload: JwtRefreshPayload = {
+          sub: result.user._id.toString(),
+          type: 'refresh',
+        };
+
+        const accessToken = await jwt.sign(accessPayload);
+        const refreshToken = await refreshJwt.sign(refreshPayload);
+
+        await authService.updateRefreshToken(result.user._id.toString(), refreshToken);
+
+        // Additive: also set httpOnly cookies for browser clients.
+        setAuthCookies((ctx as { cookie: CookieJar }).cookie, { accessToken, refreshToken });
+
+        return {
+          requiresRole: false,
+          accessToken,
+          refreshToken,
+          user: {
+            id: result.user._id.toString(),
+            firebaseUid: result.user.firebaseUid,
+            email: result.user.email,
+            phoneNumber: result.user.phoneNumber,
+            name: result.user.name,
+            role: result.user.role,
+            profilePicture: result.user.profilePicture,
+          },
+        };
+      },
+      {
+        body: PhoneAuthSchema,
+        detail: {
+          tags: ['Auth'],
+          summary: 'Verify Phone (OTP) Sign-In',
+          description:
+            'Verify a Firebase phone ID token (X-Firebase-Token header or idToken body) and authenticate the user.',
         },
       }
     )

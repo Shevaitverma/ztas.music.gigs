@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { SIGNUP_URL } from "@/lib/links";
 
 interface PricingPlan {
   name: string;
@@ -11,58 +12,60 @@ interface PricingPlan {
   period: string;
   description: string;
   features: string[];
+  note?: string;
   isPopular?: boolean;
   buttonText: string;
   href: string;
 }
 
+// No subscriptions. The platform is free to join; we earn a commission only
+// when a booking completes. Escrow + OTP-based release roll out during the beta.
 const plans: PricingPlan[] = [
   {
-    name: "Free",
-    price: "$0",
+    name: "Free to Join",
+    price: "₹0",
     period: "/forever",
-    description: "Perfect for venues posting occasional gigs or artists just starting out.",
+    description: "For every artist and organiser. No subscription, no upfront cost.",
     features: [
       "Post unlimited gigs",
-      "Browse all artists",
-      "Basic messaging",
-      "Email support",
+      "Browse and contact artists",
+      "Send quotes and proposals",
+      "Direct messaging",
     ],
-    buttonText: "Get Started Free",
-    href: "https://app.ztsmusic.com/register",
+    buttonText: "Get early access",
+    href: SIGNUP_URL,
   },
   {
-    name: "Pro",
-    price: "$29",
-    period: "/month",
-    description: "For active venues and professional artists who book regularly.",
+    name: "Pay When You Book",
+    price: "~10–12%",
+    period: "per completed booking",
+    description:
+      "No monthly fees. We earn a small platform commission only when a booking actually completes.",
     features: [
-      "Everything in Free",
-      "Featured gig listings",
-      "Priority in search",
-      "Booking calendar sync",
-      "Performance analytics",
-      "Priority support",
+      "No upfront or monthly cost",
+      "Fee only on completed bookings",
+      "Payment held in escrow",
+      "Released after OTP check-in",
     ],
+    note: "Escrow and OTP-based release roll out during the beta.",
     isPopular: true,
-    buttonText: "Start Pro Trial",
-    href: "https://app.ztsmusic.com/register?plan=pro",
+    buttonText: "Get early access",
+    href: SIGNUP_URL,
   },
   {
-    name: "Business",
-    price: "$99",
-    period: "/month",
-    description: "For venues with multiple locations or booking agencies.",
+    name: "Early Access",
+    price: "Beta",
+    period: "",
+    description:
+      "We're onboarding our first artists and organisers in India right now. Join early to help shape what we build.",
     features: [
-      "Everything in Pro",
-      "Multi-venue management",
-      "Team accounts (5 users)",
-      "Bulk gig posting",
-      "API access",
-      "Dedicated manager",
+      "Founding-member access",
+      "A direct line to the team",
+      "First to try new features",
+      "Help set fair, transparent pricing",
     ],
-    buttonText: "Contact Sales",
-    href: "https://app.ztsmusic.com/contact",
+    buttonText: "Join the beta",
+    href: SIGNUP_URL,
   },
 ];
 
@@ -176,25 +179,31 @@ function SpotlightCard({
               <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-purple-500/20">
                 <Check className="h-2.5 w-2.5 text-purple-400" />
               </div>
-              <span className="text-sm text-white/50">
+              <span className="text-sm text-white/70">
                 {feature}
               </span>
             </li>
           ))}
         </ul>
 
+        {/* Note */}
+        {plan.note && (
+          <p className="relative mt-4 text-xs italic text-white/50">
+            {plan.note}
+          </p>
+        )}
+
         {/* CTA */}
-        <Link href={plan.href} className="block mt-6">
-          <Button
-            className={`w-full ${
-              plan.isPopular
-                ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:opacity-90"
-                : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
-            }`}
-          >
-            {plan.buttonText}
-          </Button>
-        </Link>
+        <Button
+          asChild
+          className={`mt-6 w-full ${
+            plan.isPopular
+              ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:opacity-90"
+              : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
+          }`}
+        >
+          <Link href={plan.href}>{plan.buttonText}</Link>
+        </Button>
       </div>
     </div>
   );
@@ -284,8 +293,9 @@ export function PricingSection() {
             </span>{" "}
             Pricing
           </h2>
-          <p className="mt-4 text-base text-white/50">
-            Choose the plan that fits your needs. Upgrade or downgrade anytime.
+          <p className="mt-4 text-base text-white/60">
+            Free to join — no subscriptions. We only earn a small commission when
+            you complete a booking. You&rsquo;ll always see the fee upfront.
           </p>
         </div>
 

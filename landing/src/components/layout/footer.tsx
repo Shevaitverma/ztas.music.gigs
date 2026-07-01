@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { APP_URL, SIGNUP_URL } from "@/lib/links";
 
 interface FooterLink {
   href: string;
@@ -12,35 +13,33 @@ interface FooterSection {
 
 const footerSections: FooterSection[] = [
   {
-    title: "For Artists",
+    title: "Explore",
     links: [
       { href: "#features", label: "Features" },
-      { href: "#pricing", label: "Pricing" },
       { href: "#how-it-works", label: "How it Works" },
+      { href: "#pricing", label: "Pricing" },
+      { href: "#why", label: "Why ZTS" },
     ],
   },
   {
-    title: "For Venues",
+    title: "For Artists",
     links: [
-      { href: "#testimonials", label: "About" },
-      { href: "#", label: "Blog" },
-      { href: "#", label: "Careers" },
+      { href: SIGNUP_URL, label: "Find Gigs" },
+      { href: SIGNUP_URL, label: "Get Early Access" },
     ],
   },
   {
-    title: "Support",
+    title: "For Organisers",
     links: [
-      { href: "#", label: "Help Center" },
-      { href: "#", label: "Contact" },
-      { href: "#", label: "Community" },
+      { href: SIGNUP_URL, label: "Post a Gig" },
+      { href: APP_URL, label: "Explore the App" },
     ],
   },
   {
     title: "Legal",
     links: [
-      { href: "#", label: "Privacy" },
-      { href: "#", label: "Terms" },
-      { href: "#", label: "Cookies" },
+      { href: "/privacy", label: "Privacy" },
+      { href: "/terms", label: "Terms" },
     ],
   },
 ];
@@ -71,9 +70,9 @@ export function Footer() {
                 ZTS Gigs
               </span>
             </Link>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/40">
-              The platform connecting talented artists with venues and event organizers.
-              Book live music, simplified.
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">
+              An early-access marketplace connecting artists with event organisers
+              across India. Book live music, simplified.
             </p>
           </div>
 
@@ -88,7 +87,7 @@ export function Footer() {
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="text-sm text-white/40 transition-colors duration-200 hover:text-white/70"
+                      className="text-sm text-white/60 transition-colors duration-200 hover:text-white"
                     >
                       {link.label}
                     </Link>
@@ -102,29 +101,12 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-12 border-t border-white/[0.06] pt-8">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-            <p className="text-xs text-white/30">
-              © {new Date().getFullYear()} ZTS Music. All rights reserved.
+            <p className="text-xs text-white/50">
+              © {new Date().getFullYear()} ZTS Gigs. All rights reserved.
             </p>
-            <div className="flex gap-6">
-              <Link
-                href="#"
-                className="text-xs text-white/30 transition-colors duration-200 hover:text-white/60"
-              >
-                Instagram
-              </Link>
-              <Link
-                href="#"
-                className="text-xs text-white/30 transition-colors duration-200 hover:text-white/60"
-              >
-                Instagram
-              </Link>
-              <Link
-                href="#"
-                className="text-xs text-white/30 transition-colors duration-200 hover:text-white/60"
-              >
-                LinkedIn
-              </Link>
-            </div>
+            <p className="text-xs text-white/50">
+              Early access · Now onboarding in India
+            </p>
           </div>
         </div>
       </div>

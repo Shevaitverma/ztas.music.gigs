@@ -111,7 +111,10 @@ export const loggingPlugin = () =>
       }
     })
 
-    .onAfterHandle(({ request, set }) => {
+    // `as: 'global'` is REQUIRED: hooks on a *named* plugin default to local
+    // scope, so this never ran for parent-app routes — no response log line and
+    // no X-Request-ID on any response. (`onRequest` is unaffected by scoping.)
+    .onAfterHandle({ as: 'global' }, ({ request, set }) => {
       const url = new URL(request.url);
       const method = request.method;
       const path = url.pathname + url.search;
@@ -158,7 +161,7 @@ export const loggingPlugin = () =>
       }
     })
 
-    .onError(({ request, error, set }) => {
+    .onError({ as: 'global' }, ({ request, error, set }) => {
       const url = new URL(request.url);
       const method = request.method;
       const path = url.pathname + url.search;

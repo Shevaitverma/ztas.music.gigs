@@ -42,50 +42,6 @@ export interface AuthUser {
 }
 
 /**
- * Auth Response (login/signup)
- */
-export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: {
-    id: string;
-    firebaseUid: string;
-    email?: string;
-    phoneNumber?: string;
-    name?: string;
-    role: UserRole;
-    profilePicture?: string;
-  };
-}
-
-/**
- * Authenticated Route Context
- * Context object passed to protected route handlers
- */
-export interface AuthenticatedContext {
-  user: AuthUser;
-  isAuthenticated: true;
-  headers: Record<string, string | undefined>;
-  set: {
-    headers: Record<string, string> & {
-      [key: string]: string;
-    };
-    status?: number;
-  };
-  query: Record<string, string | undefined>;
-  params: Record<string, string | undefined>;
-  body: unknown;
-  jwt: {
-    sign: (payload: JwtPayload) => Promise<string>;
-    verify: (token: string) => Promise<JwtPayload | false>;
-  };
-  refreshJwt: {
-    sign: (payload: JwtRefreshPayload) => Promise<string>;
-    verify: (token: string) => Promise<JwtRefreshPayload | false>;
-  };
-}
-
-/**
  * Helper type for route handlers that need authentication.
  * Use with type assertion: (ctx as RouteContext)
  */

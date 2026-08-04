@@ -67,7 +67,6 @@ function getPageTitle(pathname: string): string {
   if (pathname.match(/^\/artist\/gigs\/[^/]+$/)) return 'Gig Details'
   if (pathname.match(/^\/artist\/bids\/[^/]+$/)) return 'Bid Details'
   if (pathname.match(/^\/client\/gigs\/[^/]+$/)) return 'Gig Details'
-  if (pathname.match(/^\/client\/gigs\/[^/]+\/bids$/)) return 'Review Bids'
 
   return routes[pathname] || 'ZTS Music'
 }

@@ -19,7 +19,7 @@ export default function VerificationsPage() {
   const params = {
     page: 1,
     limit: 50,
-    status: 'pending' as const,
+    status: 'PENDING' as const,
     ...(typeFilter !== 'all' ? { type: typeFilter } : {}),
   }
 

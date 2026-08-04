@@ -10,16 +10,18 @@ import {
   Clock,
   MapPin,
   Users,
-  Star,
   Send,
   AlertCircle,
   CheckCircle2,
   TrendingDown,
   AlertTriangle,
+  KeyRound,
   Wifi,
 } from 'lucide-react'
+import Link from 'next/link'
 import { Card, Button, Badge, StatusBadge, Avatar, GigCardSkeleton } from '@/components/ui'
 import { gigsApi, bidsApi } from '@/lib/api'
+import { capture } from '@/lib/analytics'
 import {
   formatCurrency,
   formatEventDate,
@@ -47,7 +49,7 @@ export default function GigDetailPage() {
   const { isConnected } = useBidsSocket({
     gigId,
     asArtist: true,
-    onOutbid: (data) => {
+    onOutbid: () => {
       // Refresh bid status when outbid
       queryClient.invalidateQueries({ queryKey: ['bidStatus', gigId] })
     },
@@ -67,6 +69,17 @@ export default function GigDetailPage() {
     enabled: !!gigId && !!user,
   })
 
+  // `GET /gigs/:id` doesn't return acceptedArtist, so the artist's own accepted
+  // bids are what tell us whether this booking is theirs. `/bids/my` (not
+  // `/bids/my/accepted`) because the latter hides past-dated and COMPLETED
+  // gigs — which would kill the "Go to Check-in" CTA on the event day itself.
+  const { data: acceptedBids = [] } = useQuery({
+    queryKey: ['bids', 'my', 'ACCEPTED'],
+    queryFn: () => bidsApi.getMyBids({ status: 'ACCEPTED' }),
+    enabled: !!gigId && !!user && !!gig && gig.status !== 'LIVE',
+  })
+  const myAcceptedBid = acceptedBids.find((b) => b.gigId === gigId)
+
   // Create bid mutation
   const createBidMutation = useMutation({
     mutationFn: () =>
@@ -76,6 +89,9 @@ export default function GigDetailPage() {
         proposal,
       }),
     onSuccess: () => {
+      // `is_first_bid`: nobody had bid on this gig before this one. Answers
+      // "do gigs attract a first bidder at all", the top of the bid funnel.
+      capture('bid_placed', { is_first_bid: !bidStatus?.currentLowest })
       queryClient.invalidateQueries({ queryKey: ['bids', 'my'] })
       queryClient.invalidateQueries({ queryKey: ['bidStatus', gigId] })
       queryClient.invalidateQueries({ queryKey: ['gig', gigId] })
@@ -299,17 +315,12 @@ export default function GigDetailPage() {
               <h2 className="text-lg font-semibold text-foreground mb-4">Posted By</h2>
               <div className="flex items-center gap-4">
                 <Avatar
-                  src={gig.client?.profilePicture}
-                  name={gig.client?.name || 'Client'}
+                  src={gig.postedBy?.profilePicture}
+                  name={gig.postedBy?.name || 'Client'}
                   size="lg"
                 />
                 <div>
-                  <p className="font-medium text-foreground">{gig.client?.name || 'Client'}</p>
-                  <div className="flex items-center gap-1 text-foreground-muted">
-                    <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                    <span>4.8</span>
-                    <span className="text-foreground-subtle">• 12 gigs posted</span>
-                  </div>
+                  <p className="font-medium text-foreground">{gig.postedBy?.name || 'Client'}</p>
                 </div>
               </div>
             </Card>
@@ -470,6 +481,18 @@ export default function GigDetailPage() {
                     </p>
                   </div>
                 ) : null
+              ) : myAcceptedBid ? (
+                /* This artist won the gig — send them straight to check-in. */
+                <div className="text-center p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
+                  <p className="font-medium text-emerald-400 mb-1">You&apos;re booked for this gig</p>
+                  <p className="text-sm text-foreground-muted mb-4">
+                    Get the 6-digit code from the organizer at the venue.
+                  </p>
+                  <Button variant="primary" fullWidth asChild leftIcon={<KeyRound className="w-4 h-4" />}>
+                    <Link href={`/artist/gigs/${gigId}/checkin`}>Go to Check-in</Link>
+                  </Button>
+                </div>
               ) : (
                 <div className="text-center p-4 rounded-xl bg-surface">
                   <AlertCircle className="w-8 h-8 text-foreground-muted mx-auto mb-2" />

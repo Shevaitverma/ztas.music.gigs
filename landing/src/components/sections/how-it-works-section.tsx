@@ -50,7 +50,7 @@ const artistSteps: Step[] = [
     icon: <MessageSquare className="h-6 w-6" />,
     title: "Send a Proposal",
     description:
-      "Pitch your rate and details. Chat directly with the organiser to fine-tune the booking.",
+      "Pitch your rate and the details of your set. The organiser compares your proposal alongside the others and picks their act.",
   },
   {
     number: "03",

@@ -1,4 +1,4 @@
-import { GigModel, Gig, BidModel, ApplicationModel, EventCheckInModel } from '../../db/models';
+import { GigModel, BidModel, ApplicationModel, EventCheckInModel } from '../../db/models';
 import {
   NotFoundException,
   ForbiddenException,
@@ -8,6 +8,7 @@ import {
 import { GigStatus, BidStatus, ApplicationStatus, CheckInStatus, UserRole } from '../../shared/enums';
 import { s3Service } from '../../services/s3.service';
 import { escapeRegex } from '../../shared/utils/validation.utils';
+import { currentEventDay, endOfEventDay, eventEndsAt } from '../../shared/utils/event-time';
 
 /**
  * Valid gig status transitions
@@ -51,14 +52,10 @@ export class GigsService {
     }
 
     // Validate event date is in the future (only for new gigs or date changes).
-    // Compare in UTC to avoid local-day boundary surprises across timezones.
+    // "Today" counts as valid until the event day is over in the app timezone —
+    // no timezone fudge factor needed, endOfEventDay resolves the real instant.
     if (dto.eventTiming?.date) {
-      const eventDate = new Date(dto.eventTiming.date);
-      const now = new Date();
-      // Allow any timestamp from "now minus 24h" forward to absorb timezone
-      // offsets while still rejecting genuinely past dates.
-      const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      if (eventDate < cutoff) {
+      if (endOfEventDay({ date: dto.eventTiming.date }) < new Date()) {
         throw new BadRequestException('Event date must be in the future');
       }
     }
@@ -154,6 +151,8 @@ export class GigsService {
   ): Promise<any> {
     const gig = await GigModel.findById(id)
       .populate('postedBy', 'name profilePicture clientProfile')
+      .populate('acceptedArtist', 'name profilePicture')
+      .populate('acceptedBid', 'amount')
       .lean()
       .exec();
 
@@ -161,17 +160,19 @@ export class GigsService {
       throw new NotFoundException('Gig not found');
     }
 
-    if (gig.status !== GigStatus.LIVE) {
-      const ownerId = (gig.postedBy as any)?._id?.toString() ?? (gig.postedBy as any)?.toString();
-      // acceptedArtist/acceptedApplicant are raw ObjectIds here (not populated).
-      const acceptedArtistId = (
-        (gig as any).acceptedArtist ?? (gig as any).acceptedApplicant
-      )?.toString();
-      const isOwner = !!caller && ownerId === caller.userId;
-      const isAdmin = caller?.role === UserRole.ADMIN;
-      const isAcceptedArtist =
-        !!caller && !!acceptedArtistId && acceptedArtistId === caller.userId;
+    const ownerId = (gig.postedBy as any)?._id?.toString() ?? (gig.postedBy as any)?.toString();
+    // acceptedArtist is populated above; acceptedApplicant is a raw ObjectId.
+    const acceptedArtistId = (
+      (gig as any).acceptedArtist?._id ??
+      (gig as any).acceptedArtist ??
+      (gig as any).acceptedApplicant
+    )?.toString();
+    const isOwner = !!caller && ownerId === caller.userId;
+    const isAdmin = caller?.role === UserRole.ADMIN;
+    const isAcceptedArtist =
+      !!caller && !!acceptedArtistId && acceptedArtistId === caller.userId;
 
+    if (gig.status !== GigStatus.LIVE) {
       let isBidder = false;
       if (caller && !isOwner && !isAdmin && !isAcceptedArtist) {
         isBidder = !!(await BidModel.exists({ gigId: gig._id, artistId: caller.userId }));
@@ -189,7 +190,10 @@ export class GigsService {
       (gig as any).viewCount = ((gig as any).viewCount || 0) + 1; // Update local copy for response
     }
 
-    return this.transformGigResponse(gig);
+    // The booked artist's identity is only for the two parties to the booking —
+    // the organizer's manage page needs it to address/review the artist, and the
+    // artist to see their own booking. Never public, never email/phone.
+    return this.transformGigResponse(gig, isOwner || isAcceptedArtist);
   }
 
   /**
@@ -254,20 +258,6 @@ export class GigsService {
       .exec();
 
     return this.transformGigResponse(populated);
-  }
-
-  /**
-   * Update gig status (internal use - called by applications service)
-   */
-  async updateGigStatus(gigId: string, newStatus: GigStatus): Promise<void> {
-    const gig = await GigModel.findById(gigId).exec();
-    if (!gig) {
-      throw new NotFoundException('Gig not found');
-    }
-
-    this.validateStatusTransition(gig.status, newStatus);
-    gig.status = newStatus;
-    await gig.save();
   }
 
   /**
@@ -367,8 +357,8 @@ export class GigsService {
     }
 
     // CLOSED represents "post-event, awaiting completion". Reject closures
-    // attempted before the event date.
-    if (gig.eventTiming?.date && new Date(gig.eventTiming.date) > new Date()) {
+    // attempted before the event has actually finished (app wall-clock).
+    if (gig.eventTiming?.date && eventEndsAt(gig.eventTiming) > new Date()) {
       throw new BadRequestException(
         'Cannot close a gig before its event date. Use cancel instead.'
       );
@@ -598,8 +588,10 @@ export class GigsService {
       filter['eventTiming.date'] = { $gte: new Date(params.dateFrom) };
     } else if (!isOwnerView) {
       // Public discovery defaults to upcoming events only — past gigs should
-      // not appear in search results.
-      filter['eventTiming.date'] = { $gte: new Date() };
+      // not appear in search results. `eventTiming.date` is a UTC-midnight day
+      // key, so compare against today's key: a gig happening tonight must stay
+      // visible all day, not vanish at 05:30 IST.
+      filter['eventTiming.date'] = { $gte: currentEventDay() };
     }
 
     const skip = (params.page - 1) * params.limit;
@@ -707,9 +699,10 @@ export class GigsService {
       matchStage['budget.min'] = { $lte: params.maxBudget };
     }
 
-    // Date range filter. Default to "now" so past events never surface.
+    // Date range filter. Default to today's event day so past events never
+    // surface but today's still do (see searchGigs for why).
     matchStage['eventTiming.date'] = {
-      $gte: params.dateFrom ? new Date(params.dateFrom) : new Date(),
+      $gte: params.dateFrom ? new Date(params.dateFrom) : currentEventDay(),
     };
     if (params.dateTo) {
       (matchStage['eventTiming.date'] as Record<string, Date>).$lte = new Date(params.dateTo);
@@ -832,8 +825,12 @@ export class GigsService {
   /**
    * Transform Gig document to full response format (matches NestJS GigResponseDto)
    */
-  private transformGigResponse(gig: any): any {
+  private transformGigResponse(gig: any, includeAccepted = false): any {
     const postedByUser = gig.postedBy || {};
+
+    // Only populated by `getGig`, and only for the owner / accepted artist.
+    const artistDoc = includeAccepted ? gig.acceptedArtist : undefined;
+    const bidDoc = includeAccepted ? gig.acceptedBid : undefined;
 
     return {
       id: gig._id.toString(),
@@ -872,6 +869,17 @@ export class GigsService {
       viewCount: gig.viewCount,
       applicationCount: gig.applicationCount,
       bidsCount: gig.bidCount || 0,
+      // `profileImage` (not `profilePicture`) to match the bid transform.
+      acceptedArtist: artistDoc?._id
+        ? {
+            id: artistDoc._id.toString(),
+            name: artistDoc.name,
+            profileImage: artistDoc.profilePicture,
+          }
+        : undefined,
+      acceptedBid: bidDoc?._id
+        ? { id: bidDoc._id.toString(), amount: bidDoc.amount }
+        : undefined,
       createdAt: gig.createdAt,
       updatedAt: gig.updatedAt,
     };

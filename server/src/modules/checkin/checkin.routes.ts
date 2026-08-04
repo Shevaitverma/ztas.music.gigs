@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { CheckInService } from './checkin.service';
-import { VerifyOtpSchema, EndEventSchema, type VerifyOtpDto } from './checkin.schemas';
+import { VerifyOtpSchema, type VerifyOtpDto } from './checkin.schemas';
 import { UserRole } from '../../shared/enums';
 import { getAuthUser, type RouteContext } from '../../shared/types/auth.types';
 import { transformPlugin } from '../../plugins/transform.plugin';

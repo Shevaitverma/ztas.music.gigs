@@ -102,8 +102,10 @@ export class ApiClientError extends Error {
           data
         )
       case 429:
+        // Keep the server's message: OTP check-in lockouts encode the retry
+        // window in it ("Try again in N minute(s)"), which the user needs.
         return new ApiClientError(
-          'Too many requests. Please wait a moment and try again.',
+          serverMessage || 'Too many requests. Please wait a moment and try again.',
           status,
           'RATE_LIMITED'
         )

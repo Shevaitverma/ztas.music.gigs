@@ -1,6 +1,8 @@
-import { BidModel, GigModel, Bid, ApplicationModel } from '../../db/models';
+import { BidModel, GigModel, ApplicationModel, NotificationType } from '../../db/models';
 import { NotFoundException, BadRequestException, ForbiddenException, ConflictException } from '../../plugins/error.plugin';
 import { BidStatus, GigStatus, ApplicationStatus } from '../../shared/enums';
+import { notificationsService } from '../notifications/notifications.service';
+import { endOfEventDay, eventStartsAt } from '../../shared/utils/event-time';
 import type { PlaceBidDto } from './bids.schemas';
 
 /**
@@ -66,8 +68,8 @@ export class BidsService {
       throw new ForbiddenException('Cannot bid on your own gig');
     }
 
-    // Reject bids on past events (event date must be in the future).
-    if (gig.eventTiming?.date && new Date(gig.eventTiming.date) < new Date()) {
+    // Reject bids on events that have already started (local wall-clock).
+    if (gig.eventTiming?.date && eventStartsAt(gig.eventTiming) < new Date()) {
       throw new BadRequestException('Cannot bid on a gig whose event date has passed');
     }
 
@@ -122,6 +124,27 @@ export class BidsService {
 
     // Increment bid count on the gig
     await GigModel.updateOne({ _id: dto.gigId }, { $inc: { bidCount: 1 } });
+
+    // Notifications are fire-and-forget: `create` never throws, so a dead email
+    // provider cannot fail the bid.
+    void notificationsService.create({
+      userId: gig.postedBy,
+      type: NotificationType.NEW_BID,
+      title: `New bid on "${gig.title}"`,
+      message: `An artist bid ₹${dto.amount} on your gig "${gig.title}".`,
+      data: { gigId: gig._id.toString(), bidId: bidDoc._id.toString(), amount: dto.amount },
+    });
+
+    // The previously-lowest bidder is the one who just lost the lead.
+    if (lowestBid && lowestBid.artistId.toString() !== userId) {
+      void notificationsService.create({
+        userId: lowestBid.artistId,
+        type: NotificationType.BID_OUTBID,
+        title: `You were outbid on "${gig.title}"`,
+        message: `Someone bid lower than your ₹${lowestBid.amount} on "${gig.title}". Lower your bid to win it back.`,
+        data: { gigId: gig._id.toString(), bidId: lowestBid._id.toString(), amount: dto.amount },
+      });
+    }
 
     const populated = await BidModel.populate(bidDoc, {
       path: 'artistId',
@@ -184,8 +207,26 @@ export class BidsService {
       );
     }
 
+    const previousAmount = bid.amount;
     bid.amount = newAmount;
     await bid.save();
+
+    // Only notify if `lowestOther` actually HELD the lead before this change.
+    // If the caller was already lowest (own bid 100, lowestOther 200), that
+    // artist was outbid long ago and lowering to 90 changes nothing for them.
+    if (lowestOther && lowestOther.amount < previousAmount) {
+      void notificationsService.create({
+        userId: lowestOther.artistId,
+        type: NotificationType.BID_OUTBID,
+        title: `You were outbid on "${gig?.title ?? 'a gig'}"`,
+        message: `Someone bid lower than your ₹${lowestOther.amount}. Lower your bid to win it back.`,
+        data: {
+          gigId: bid.gigId.toString(),
+          bidId: lowestOther._id.toString(),
+          amount: newAmount,
+        },
+      });
+    }
 
     // Populate for response
     const updatedBid = await BidModel.findById(bidId)
@@ -421,6 +462,17 @@ export class BidsService {
     }
 
     // 3. Cross-reject pending siblings (both bids and applications).
+    //    Capture the losers first — after the updateMany they are
+    //    indistinguishable from bids rejected earlier.
+    const siblings = await BidModel.find({
+      gigId: gig._id,
+      _id: { $ne: accepted._id },
+      status: BidStatus.PENDING,
+    })
+      .select('artistId')
+      .lean()
+      .exec();
+
     await BidModel.updateMany(
       {
         gigId: gig._id,
@@ -436,6 +488,36 @@ export class BidsService {
       },
       { $set: { status: ApplicationStatus.REJECTED } }
     );
+
+    // Notifications only once the whole compensating sequence has succeeded —
+    // never mid-sequence, where a rollback would make them lies.
+    const gigId = gig._id.toString();
+
+    void notificationsService.create({
+      userId: accepted.artistId,
+      type: NotificationType.BID_ACCEPTED,
+      title: `Your bid was accepted — "${gig.title}"`,
+      message: `Your ₹${accepted.amount} bid on "${gig.title}" was accepted. Check the gig for event details.`,
+      data: { gigId, bidId: accepted._id.toString(), amount: accepted.amount },
+    });
+
+    void notificationsService.create({
+      userId: gig.postedBy,
+      type: NotificationType.GIG_BOOKED,
+      title: `"${gig.title}" is booked`,
+      message: `You booked an artist for "${gig.title}" at ₹${accepted.amount}. Confirm the details with them before the event.`,
+      data: { gigId, bidId: accepted._id.toString(), amount: accepted.amount },
+    });
+
+    for (const sibling of siblings) {
+      void notificationsService.create({
+        userId: sibling.artistId,
+        type: NotificationType.BID_REJECTED,
+        title: `Your bid was not selected — "${gig.title}"`,
+        message: `"${gig.title}" has been booked with another artist. Keep an eye out for new gigs.`,
+        data: { gigId, bidId: sibling._id.toString() },
+      });
+    }
 
     return this.transformBidResponse(accepted);
   }
@@ -467,6 +549,14 @@ export class BidsService {
       { _id: gig._id, bidCount: { $gt: 0 } },
       { $inc: { bidCount: -1 } }
     );
+
+    void notificationsService.create({
+      userId: updated.artistId,
+      type: NotificationType.BID_REJECTED,
+      title: `Your bid was not selected — "${gig.title}"`,
+      message: `Your ₹${updated.amount} bid on "${gig.title}" was declined. Keep an eye out for new gigs.`,
+      data: { gigId: gig._id.toString(), bidId: updated._id.toString(), amount: updated.amount },
+    });
 
     return this.transformBidResponse(updated);
   }
@@ -561,13 +651,15 @@ export class BidsService {
       .populate('gigId', 'eventTiming status')
       .exec();
 
-    // Upcoming = gig is still BOOKED *and* event date is in the future.
+    // Upcoming = gig is still BOOKED *and* its event day isn't over yet in the
+    // app timezone. Comparing the raw (UTC-midnight) date would drop today's
+    // event at 05:30 IST — the morning of the gig.
     const upcomingGigs = acceptedBids.filter((bid) => {
       const gig = bid.gigId as any;
       if (!gig?.eventTiming?.date) return false;
       return (
         gig.status === GigStatus.BOOKED &&
-        new Date(gig.eventTiming.date) >= now
+        endOfEventDay(gig.eventTiming) >= now
       );
     }).length;
 
@@ -612,12 +704,13 @@ export class BidsService {
       .lean()
       .exec();
 
-    // Filter to only future events and transform
+    // Filter to events whose day hasn't ended yet (app timezone) and transform.
+    // The gig must stay on the artist's dashboard through the day it happens.
     return bids
       .filter((bid) => {
         const gig = bid.gigId as any;
         if (!gig?.eventTiming?.date) return false;
-        return new Date(gig.eventTiming.date) >= now && gig.status !== GigStatus.COMPLETED;
+        return endOfEventDay(gig.eventTiming) >= now && gig.status !== GigStatus.COMPLETED;
       })
       .map((bid) => this.transformBidResponse(bid));
   }

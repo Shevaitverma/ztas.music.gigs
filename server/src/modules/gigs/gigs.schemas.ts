@@ -4,7 +4,6 @@ import { GigCategory, GigStatus, MusicGenre } from '../../shared/enums';
 /**
  * MongoDB ObjectId validation pattern
  */
-const OBJECT_ID_PATTERN = '^[a-fA-F0-9]{24}$';
 
 /**
  * Coordinates Schema with proper bounds validation
@@ -91,23 +90,4 @@ export const UpdateGigSchema = t.Object({
   requirements: t.Optional(t.String({ maxLength: 1000 })),
   equipmentProvided: t.Optional(t.Array(t.String())),
   preferredGenres: t.Optional(t.Array(t.String())),
-});
-
-/**
- * Search Gigs Schema
- */
-export const SearchGigsSchema = t.Object({
-  query: t.Optional(t.String()),
-  city: t.Optional(t.String()),
-  category: t.Optional(t.Enum(GigCategory)),
-  status: t.Optional(t.Enum(GigStatus)),
-  minBudget: t.Optional(t.Numeric()),
-  maxBudget: t.Optional(t.Numeric()),
-  date: t.Optional(t.String()),
-  lat: t.Optional(t.Numeric()),
-  lng: t.Optional(t.Numeric()),
-  distance: t.Optional(t.Numeric({ default: 50000 })), // meters
-  page: t.Optional(t.Numeric({ default: 1 })),
-  limit: t.Optional(t.Numeric({ default: 20 })),
-  postedBy: t.Optional(t.String()), // Find gigs by a specific client
 });

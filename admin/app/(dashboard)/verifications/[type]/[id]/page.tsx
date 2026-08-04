@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/verifications/confirm-dialog'
 import { RejectDialog } from '@/components/verifications/reject-dialog'
 import { VerificationDetailCard } from '@/components/verifications/verification-detail-card'
+import { capture } from '@/lib/analytics'
 import { verificationQueryKeys, verificationsApi } from '@/lib/api/verifications'
 import type {
   VerificationKind,
@@ -29,11 +30,11 @@ import type { VerificationDetail } from '@/lib/types'
 function applicableSections(data: VerificationDetail): VerificationSection[] {
   const sections: VerificationSection[] = []
   if (data.identity) sections.push('identity')
-  if (data.kind === 'organizer') {
+  if (data.type === 'organizer') {
     if (data.business) sections.push('business')
     if (data.venues && data.venues.length > 0) sections.push('venue')
   }
-  if (data.kind === 'artist') {
+  if (data.type === 'artist') {
     if (data.bankAccount) sections.push('bank')
     if (data.professional) sections.push('professional')
   }
@@ -58,14 +59,20 @@ export default function VerificationDetailPage() {
   // Verification approve/reject are gated server-side by `UserRole.ADMIN`
   // only — there is no fine-grained permission check. The admin dashboard
   // layout already enforces admin access, so we don't gate further here.
-  const [section, setSection] = useState<VerificationSection>('identity')
+  const [selectedSection, setSelectedSection] = useState<VerificationSection | null>(null)
   const [venueId, setVenueId] = useState<string | undefined>(undefined)
   const [confirmApprove, setConfirmApprove] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
 
   const sections = detailQuery.data ? applicableSections(detailQuery.data) : []
+  // Derived, not stored: falls back to the first available section whenever the
+  // current pick isn't offered (initial load, or data changed under it).
+  const section: VerificationSection =
+    selectedSection && sections.includes(selectedSection)
+      ? selectedSection
+      : sections[0] ?? 'identity'
   const venues =
-    detailQuery.data && detailQuery.data.kind === 'organizer'
+    detailQuery.data && detailQuery.data.type === 'organizer'
       ? detailQuery.data.venues ?? []
       : []
 
@@ -81,6 +88,8 @@ export default function VerificationDetailPage() {
         ...(section === 'venue' && venueId ? { venueId } : {}),
       }),
     onSuccess: () => {
+      // Section enum only. Nothing from the KYC documents on this page.
+      capture('admin_verification_reviewed', { decision: 'approved', section })
       toast.success(`Approved ${section}`)
       setConfirmApprove(false)
       invalidate()
@@ -99,6 +108,8 @@ export default function VerificationDetailPage() {
         reason,
       }),
     onSuccess: () => {
+      // The rejection reason is operator free text — audit log only.
+      capture('admin_verification_reviewed', { decision: 'rejected', section })
       toast.success(`Rejected ${section}`)
       setRejectOpen(false)
       invalidate()
@@ -171,7 +182,7 @@ export default function VerificationDetailPage() {
                   </label>
                   <select
                     value={section}
-                    onChange={(e) => setSection(e.target.value as VerificationSection)}
+                    onChange={(e) => setSelectedSection(e.target.value as VerificationSection)}
                     className="rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-indigo-500"
                   >
                     {sections.map((s) => (
@@ -209,6 +220,7 @@ export default function VerificationDetailPage() {
                   onClick={() => setConfirmApprove(true)}
                   disabled={
                     approveMutation.isPending ||
+                    sections.length === 0 ||
                     (section === 'venue' && !venueId)
                   }
                 >
@@ -218,7 +230,9 @@ export default function VerificationDetailPage() {
                   variant="danger"
                   onClick={() => setRejectOpen(true)}
                   disabled={
-                    rejectMutation.isPending || (section === 'venue' && !venueId)
+                    rejectMutation.isPending ||
+                    sections.length === 0 ||
+                    (section === 'venue' && !venueId)
                   }
                 >
                   <X className="h-4 w-4" /> Reject section

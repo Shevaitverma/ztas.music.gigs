@@ -11,8 +11,18 @@ const aadAccountNumber = (v: string | undefined | null) =>
   encryptPii(v, 'artistVerifications.bankAccount.accountNumber');
 const aadAccountNumberGet = (v: string | undefined | null) =>
   decryptPii(v, 'artistVerifications.bankAccount.accountNumber');
+// NOTE: normalisation (trim/uppercase) MUST happen inside this setter, before
+// encryption. Mongoose applies built-in transforms (`trim`, `uppercase`) AFTER
+// custom setters, so declaring `uppercase: true` on the field would uppercase
+// the *ciphertext* — turning the `enc:v1:` sentinel into `ENC:V1:` and, because
+// base64 is case-sensitive, destroying the payload irrecoverably. decryptPii
+// would then see no prefix and silently return the mangled string as if it were
+// a legacy plaintext row. Do not add `trim`/`uppercase` to the field below.
 const aadIfsc = (v: string | undefined | null) =>
-  encryptPii(v, 'artistVerifications.bankAccount.ifscCode');
+  encryptPii(
+    typeof v === 'string' ? v.trim().toUpperCase() : v,
+    'artistVerifications.bankAccount.ifscCode'
+  );
 const aadIfscGet = (v: string | undefined | null) =>
   decryptPii(v, 'artistVerifications.bankAccount.ifscCode');
 
@@ -169,8 +179,8 @@ const BankAccountVerificationSchema = new Schema<BankAccountVerification>(
     ifscCode: {
       type: String,
       required: true,
-      trim: true,
-      uppercase: true,
+      // No `trim`/`uppercase` here — they would run after `set` and corrupt the
+      // ciphertext. Normalisation happens inside `aadIfsc`. See note above.
       set: aadIfsc,
       get: aadIfscGet,
     },
@@ -253,8 +263,6 @@ ArtistVerificationSchema.pre('save', function () {
 
   const identityStatus = this.identity?.status || VerificationStatus.NOT_SUBMITTED;
   const bankStatus = this.bankAccount?.status || VerificationStatus.NOT_SUBMITTED;
-  // Professional verification is optional for basic verification
-  const professionalStatus = this.professional?.status || VerificationStatus.NOT_SUBMITTED;
 
   // If any required field is rejected, overall is rejected
   if (identityStatus === VerificationStatus.REJECTED || bankStatus === VerificationStatus.REJECTED) {

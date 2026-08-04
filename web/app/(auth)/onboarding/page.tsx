@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { Card, Button, Input } from '@/components/ui'
 import { usersApi } from '@/lib/api'
+import { capture } from '@/lib/analytics'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/providers'
 import toast from 'react-hot-toast'
@@ -64,6 +65,7 @@ export default function OnboardingPage() {
         onboardingComplete: true,
       }),
     onSuccess: async () => {
+      capture('onboarding_completed', { role: 'artist' })
       await refetchUser()
       toast.success('Profile setup complete!')
       router.push('/artist')
@@ -75,11 +77,16 @@ export default function OnboardingPage() {
 
   const clientMutation = useMutation({
     mutationFn: () =>
-      usersApi.updateProfile({
-        companyName: clientData.companyName,
-        city: clientData.city,
+      usersApi.updateMe({
+        clientProfile: {
+          companyName: clientData.companyName,
+          location: {
+            city: clientData.city,
+          },
+        },
       }),
     onSuccess: async () => {
+      capture('onboarding_completed', { role: 'client' })
       await refetchUser()
       toast.success('Profile setup complete!')
       router.push('/client')
@@ -299,7 +306,7 @@ export default function OnboardingPage() {
                           </li>
                           <li className="flex items-center gap-2">
                             <Check className="w-4 h-4 text-emerald-400" />
-                            Secure payments through escrow
+                            Agree fees and pay artists directly
                           </li>
                           <li className="flex items-center gap-2">
                             <Check className="w-4 h-4 text-emerald-400" />

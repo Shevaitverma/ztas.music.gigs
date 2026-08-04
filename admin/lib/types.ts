@@ -58,34 +58,15 @@ export interface LoginResponse {
   user: User
 }
 
-// Admin domain types (skeletal — flesh out as endpoints solidify)
-export interface VerificationRequest {
-  id: string
-  userId: string
-  user?: Pick<User, 'id' | 'name' | 'email' | 'phone'>
-  type: string
-  status: 'PENDING' | 'APPROVED' | 'REJECTED'
-  submittedAt: string
-}
-
-export interface Report {
-  id: string
-  reporterId: string
-  targetType: string
-  targetId: string
-  reason: string
-  status: 'OPEN' | 'RESOLVED' | 'DISMISSED'
-  createdAt: string
-}
-
 // --- verifications ---
+/** Mirrors server `shared/enums.VerificationStatus` — values are uppercase. */
 export type VerificationStatus =
-  | 'pending'
-  | 'submitted'
-  | 'in_review'
-  | 'approved'
-  | 'rejected'
-  | 'expired'
+  | 'NOT_SUBMITTED'
+  | 'PENDING'
+  | 'UNDER_REVIEW'
+  | 'VERIFIED'
+  | 'REJECTED'
+  | 'EXPIRED'
 
 export interface VerificationSectionState {
   status: VerificationStatus
@@ -136,8 +117,8 @@ export interface VerificationVenue {
 
 interface VerificationCommonFields {
   id: string
+  /** Server returns only the submitter's id — it does not populate the user doc. */
   userId: string
-  user?: Pick<User, 'id' | 'name' | 'email' | 'phone' | 'role' | 'profilePicture'>
   overallStatus: VerificationStatus
   identity?: VerificationIdentitySection
   createdAt: string
@@ -145,18 +126,16 @@ interface VerificationCommonFields {
 }
 
 /**
- * Discriminated union — branch on `kind` to access type-specific fields.
+ * Discriminated union — branch on `type` to access type-specific fields.
  * Mirrors server's VerificationStatusResponse.
  */
 export interface ArtistVerification extends VerificationCommonFields {
-  kind: 'artist'
   type: 'artist'
   bankAccount?: VerificationBankSection
   professional?: VerificationProfessionalSection
 }
 
 export interface OrganizerVerification extends VerificationCommonFields {
-  kind: 'organizer'
   type: 'organizer'
   business?: VerificationBusinessSection
   venues?: VerificationVenue[]

@@ -21,7 +21,21 @@ export interface SecurityPluginOptions {
    * `rateLimit` config.
    */
   routeRateLimits?: Record<string, { max: number; windowMs: number }>;
+  /**
+   * Overrides `config.rateLimit.mode` (see RATE_LIMIT_MODE). Mainly for tests.
+   */
+  rateLimitMode?: 'off' | 'log' | 'enforce';
 }
+
+/**
+ * Hard ceiling on the in-process counter map.
+ *
+ * ponytail: a single-process Map is the wrong shape for rate limiting — it
+ * resets on deploy and does not aggregate across instances. Redis is the real
+ * fix. Until then, cap the map so a distributed scan cannot OOM the process;
+ * dropping counters is strictly better than dying.
+ */
+const MAX_CACHE_ENTRIES = 100_000;
 
 /**
  * Rate Limit Entry
@@ -57,7 +71,8 @@ const DEFAULT_ROUTE_LIMITS: Record<string, { max: number; windowMs: number }> = 
  * Security Plugin
  * Provides:
  * - Security headers (helmet-like)
- * - Per-IP rate limiting (with per-route overrides)
+ * - Per-IP rate limiting (with per-route overrides), gated by RATE_LIMIT_MODE
+ *   (`off` | `log` | `enforce`, default `log`)
  * - Request ID generation
  * - XSS protection
  *
@@ -71,6 +86,12 @@ export const securityPlugin = (options: SecurityPluginOptions = {}) => {
   const windowMs = options.rateLimit?.windowMs ?? 60000; // 1 minute default
   const trustedProxies = new Set(options.trustedProxies ?? config.trustedProxies);
   const routeLimits = { ...DEFAULT_ROUTE_LIMITS, ...(options.routeRateLimits || {}) };
+  const mode = options.rateLimitMode ?? config.rateLimit.mode;
+
+  // SECURITY (CSRF): cookies are SameSite=None in production, so a cross-site
+  // form POST would otherwise carry the auth cookie. Same allowlist as CORS.
+  const allowedOrigins = new Set(config.cors.origins);
+  const originCheckDisabled = allowedOrigins.has('*');
 
   // Cleanup expired entries periodically
   setInterval(() => {
@@ -82,11 +103,12 @@ export const securityPlugin = (options: SecurityPluginOptions = {}) => {
     }
   }, windowMs);
 
-  return new Elysia({ name: 'security' })
-    // Generate unique request ID
-    .derive(() => ({
-      requestId: crypto.randomUUID(),
-    }))
+  // `seed` keeps Elysia's named-plugin dedupe from collapsing two instances
+  // configured differently (tests construct several).
+  return new Elysia({ name: 'security', seed: options })
+    // NOTE: X-Request-ID is owned by logging.plugin (which sets it on every
+    // response). The local `derive` that used to duplicate it here was
+    // invisible to globally-scoped hooks, so it has been removed.
 
     // Add security headers on all responses
     .onRequest(({ set }) => {
@@ -111,8 +133,28 @@ export const securityPlugin = (options: SecurityPluginOptions = {}) => {
       }
     })
 
-    // Rate limiting
-    .onBeforeHandle(({ request, set, requestId, server }) => {
+    // CSRF: Origin/Referer allowlist for state-changing requests.
+    .onBeforeHandle({ as: 'global' }, ({ request, set }) => {
+      if (originCheckDisabled) return;
+      if (request.method === 'GET' || request.method === 'HEAD' || request.method === 'OPTIONS') return;
+
+      // Browsers always send Origin on cross-site writes; Referer is the
+      // fallback for the rare same-site-only browser. If BOTH are missing the
+      // caller is a non-browser client (curl, mobile app) which cannot be
+      // CSRF'd — we allow it rather than break those clients.
+      const origin = request.headers.get('origin') || originOf(request.headers.get('referer'));
+      if (!origin || allowedOrigins.has(origin)) return;
+
+      set.status = 403;
+      return { statusCode: 403, error: 'Forbidden', message: 'Cross-site request blocked' };
+    })
+
+    // Rate limiting.
+    // `as: 'global'` is REQUIRED: hooks on a *named* plugin default to local
+    // scope, which is why this hook silently never ran before.
+    .onBeforeHandle({ as: 'global' }, ({ request, set, server }) => {
+      if (mode === 'off') return;
+
       // SECURITY (C4): the *socket peer* IP — taken from Bun's server, NOT
       // from any client-controlled header. This is the only IP we use to
       // decide whether XFF can be trusted. Without this, anyone could send
@@ -145,6 +187,7 @@ export const securityPlugin = (options: SecurityPluginOptions = {}) => {
 
       // Initialize or reset expired entry
       if (!entry || now > entry.resetTime) {
+        if (cache.size >= MAX_CACHE_ENTRIES) cache.clear();
         entry = { count: 0, resetTime: now + effectiveWindow };
         cache.set(cacheKey, entry);
       }
@@ -156,11 +199,17 @@ export const securityPlugin = (options: SecurityPluginOptions = {}) => {
       set.headers['X-RateLimit-Remaining'] = String(Math.max(0, effectiveMax - entry.count));
       set.headers['X-RateLimit-Reset'] = String(Math.ceil(entry.resetTime / 1000));
 
-      // Add request ID to response
-      set.headers['X-Request-ID'] = requestId;
-
       // Check if rate limit exceeded
       if (entry.count > effectiveMax) {
+        if (mode === 'log') {
+          // Observe-only: emit exactly what enforce would have blocked so the
+          // caps can be tuned against real traffic before switching over.
+          console.warn(
+            `[RateLimit] WOULD BLOCK ${routeKey} from ${clientIp} — ${entry.count}/${effectiveMax} in ${effectiveWindow / 1000}s (mode=log)`
+          );
+          return;
+        }
+
         set.status = 429;
         set.headers['Retry-After'] = String(Math.ceil((entry.resetTime - now) / 1000));
 
@@ -173,6 +222,16 @@ export const securityPlugin = (options: SecurityPluginOptions = {}) => {
       }
     });
 };
+
+/** Origin (scheme://host[:port]) of a URL, or null if absent/unparseable. */
+function originOf(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Returns the *true* socket peer IP using Bun's server adapter
@@ -195,18 +254,4 @@ function getSocketIp(request: Request, server?: { requestIP?: (req: Request) => 
     // ignore and fall through
   }
   return '';
-}
-
-/**
- * Get client IP from request. Prefer passing the Elysia `server` handle so
- * the real socket peer is used; without it, this falls back to the leftmost
- * X-Forwarded-For entry — but callers SHOULD NOT use that result for any
- * security decision (rate limiting, ACLs). It exists for legacy logging.
- */
-export function getClientIp(request: Request, server?: { requestIP?: (req: Request) => { address: string } | null } | null): string {
-  const peer = getSocketIp(request, server);
-  if (peer) return peer;
-  const xff = request.headers.get('x-forwarded-for');
-  const realIp = request.headers.get('x-real-ip');
-  return (xff?.split(',')[0]?.trim() || realIp || 'unknown').trim();
 }

@@ -5,14 +5,6 @@
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-interface LogMessage {
-  timestamp: string;
-  level: LogLevel;
-  context?: string;
-  message: string;
-  data?: any;
-}
-
 class LoggerService {
   private context: string;
   private isDevelopment: boolean;
@@ -37,9 +29,18 @@ class LoggerService {
     const prefix = `[${timestamp}] [${level.toUpperCase()}] [${this.context}]`;
     
     if (data) {
-      return `${prefix} ${message}\n${JSON.stringify(data, null, 2)}`;
+      // JSON.stringify throws on cyclic structures and BigInts. Logging must
+      // never be the thing that kills a request (call sites use `void`, so a
+      // throw here becomes an unhandled rejection).
+      let serialized: string;
+      try {
+        serialized = JSON.stringify(data, null, 2) ?? String(data);
+      } catch {
+        serialized = String(data);
+      }
+      return `${prefix} ${message}\n${serialized}`;
     }
-    
+
     return `${prefix} ${message}`;
   }
 

@@ -14,8 +14,8 @@ import {
   Send,
   AlertCircle,
   CheckCircle2,
-  Star,
   ExternalLink,
+  KeyRound,
   Wifi,
   TrendingDown,
 } from 'lucide-react'
@@ -31,6 +31,7 @@ import {
   ConfirmModal,
 } from '@/components/ui'
 import { gigsApi, bidsApi } from '@/lib/api'
+import { capture } from '@/lib/analytics'
 import {
   formatCurrency,
   formatEventDate,
@@ -96,8 +97,12 @@ export default function ClientGigDetailPage() {
   const acceptBidMutation = useMutation({
     mutationFn: (bidId: string) => bidsApi.accept(bidId),
     onSuccess: () => {
+      capture('bid_accepted', { bid_count: bids.length })
       queryClient.invalidateQueries({ queryKey: ['gig', gigId] })
       queryClient.invalidateQueries({ queryKey: ['bids', 'gig', gigId] })
+      // Accepting flips the gig LIVE -> BOOKED, so the "my gigs" lists and the
+      // dashboard counts are stale without this.
+      queryClient.invalidateQueries({ queryKey: ['gigs', 'my'] })
       toast.success('Bid accepted! The artist has been notified.')
       setAcceptingBidId(null)
     },
@@ -234,18 +239,20 @@ export default function ClientGigDetailPage() {
               </Button>
             )}
             {/*
-              The "Edit Gig" route (/client/gigs/:id/edit) and the post-booking
-              "Manage Event" hub (/client/gigs/:id/manage) are not built yet, so
-              linking to them 404'd (WEB-006, WEB-002). The edit buttons are
-              hidden until that page ships; for a BOOKED gig we show an honest
-              status instead of a dead link. The manage hub (check-in + payment)
-              is part of the payments build.
+              The "Edit Gig" route (/client/gigs/:id/edit) is still not built,
+              so those buttons stay hidden (WEB-006). The post-booking hub now
+              exists at /client/gigs/:id/manage.
+
+              NOTE: `GET /gigs/:id` does not return `acceptedArtist`, so this
+              gates on status alone — keying off `gig.acceptedArtist` meant the
+              banner never rendered at all.
             */}
-            {gig.status === 'BOOKED' && gig.acceptedArtist && (
-              <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-300">
-                <CheckCircle2 className="w-4 h-4" />
-                Booked — event check-in &amp; payment coming soon
-              </span>
+            {(gig.status === 'BOOKED' || gig.status === 'COMPLETED') && (
+              <Button variant="primary" asChild leftIcon={<KeyRound className="w-4 h-4" />}>
+                <Link href={`/client/gigs/${gigId}/manage`}>
+                  {gig.status === 'BOOKED' ? 'Manage Event & Check-in' : 'Event Summary & Review'}
+                </Link>
+              </Button>
             )}
             {['DRAFT', 'LIVE'].includes(gig.status) && (
               <Button
@@ -306,7 +313,7 @@ export default function ClientGigDetailPage() {
                     {/* Artist Info */}
                     <div className="flex items-start gap-3 flex-1">
                       <Avatar
-                        src={bid.artist?.profilePicture}
+                        src={bid.artist?.profileImage}
                         name={bid.artist?.name || 'Artist'}
                         size="lg"
                       />
@@ -324,9 +331,6 @@ export default function ClientGigDetailPage() {
                           <StatusBadge status={bid.status} />
                         </div>
                         <div className="flex items-center gap-2 text-sm text-foreground-muted mb-2">
-                          <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                          <span>4.9</span>
-                          <span>•</span>
                           <span>{bid.artist?.artistProfile?.yearsOfExperience || 0} yrs exp</span>
                         </div>
                         {bid.proposal && (

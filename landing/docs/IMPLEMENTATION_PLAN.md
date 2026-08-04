@@ -1,5 +1,34 @@
 # ZTS Music Platform - Implementation Plan
 
+> ## ⚠️ STALE PLANNING DOC — the phase plan below was largely not executed as written.
+>
+> Audited 2026-08-04. Reconciliation against the actual codebase:
+>
+> - **Phase 1 (Redis, files, email, rate limiting)** — only file storage
+>   shipped (S3). No Redis, no email service. Rate limiting was *written* but
+>   its Elysia hook is local-scoped and **never executes**, so nothing is
+>   throttled today — see `PROJECT_CONTEXT.md` § "Rate limiting / proxy trust".
+> - **Phase 2 (Payments)** — ❌ **not started.** No `Transaction` model, no
+>   gateway, no routes. This is still the platform's largest gap.
+> - **Phase 3 (Communication & Trust)** — partial. Reviews, reports and KYC
+>   verification shipped. Messaging was never built. Notification *delivery*
+>   (push/SMS/email) was never built — only DB records exist.
+> - **Phase 4 (Polish)** — not tracked; no perf suite or monitoring exists.
+>
+> What actually shipped instead, and is not in this plan: the httpOnly-cookie
+> auth migration, WebSocket ws-ticket auth, AES-256-GCM PII encryption, the
+> event check-in OTP system (server-side; no UI), and the admin moderation
+> panel.
+>
+> The "Data Models" and "API Specifications" sections below are **proposals, not
+> the shipped contract.** For the real API read `server/src/modules/*/`; for the
+> real schema read `server/src/db/models/`. The "Environment Variables (New)"
+> section is likewise a wishlist — the authoritative list is
+> `server/.env.example`.
+>
+> Also note this file lives in `landing/docs/` while planning the whole
+> platform — an artifact of an older repo layout.
+
 > Comprehensive plan to make ZTS production-ready
 
 ## Table of Contents

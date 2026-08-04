@@ -1,5 +1,28 @@
 # ZTS Music Platform - Feature Prioritization Matrix
 
+> ## ⚠️ STALE PLANNING DOC — the ordering below has been overtaken by what actually got built.
+>
+> Audited 2026-08-04. The scoring *framework* is still reasonable; the specific
+> rankings, sprint plan and "MVP feature set" no longer describe the project.
+> Several items scored as launch-blockers shipped long ago (KYC verification,
+> reviews, reports, admin moderation, event check-in on the server side), while
+> the single biggest gap — **payments/escrow, which do not exist in any form** —
+> has not moved.
+>
+> If you want the current priority order, use `server/FUTURE.md` §7, which was
+> reconciled against code on the same date. Short version:
+>
+> 1. Payments / escrow / payouts — entirely unbuilt
+> 2. Post-booking UI — check-in OTP and review submission are backend-complete
+>    and unreachable by users, which makes this the cheapest large win
+> 3. Notification delivery — pick one channel and wire it
+> 4. Rate limiting — written, but the hook never runs
+>
+> The "User Journey Gaps" section below is the part that has aged best; note the
+> gap it does not mention is that the journey dead-ends the moment a bid is
+> accepted. Also note this file lives in `landing/docs/` while prioritising the
+> whole platform — an artifact of an older repo layout.
+
 > What to build first and why
 
 ---

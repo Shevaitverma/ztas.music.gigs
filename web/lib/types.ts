@@ -67,8 +67,16 @@ export type GigCategory =
 
 export interface Gig {
   id: string
-  clientId: string
-  client?: User
+  /**
+   * The organizer. NOTE: `GET /gigs/:id` returns this as `postedBy` with only
+   * `{ id, name, profilePicture }` populated — there is no `client`/`clientId`
+   * field and no email/phone on the wire.
+   */
+  postedBy?: {
+    id: string
+    name?: string
+    profilePicture?: string
+  }
   title: string
   description: string
   category: GigCategory
@@ -93,6 +101,10 @@ export interface Gig {
   }
   requirements?: string
   status: GigStatus
+  /**
+   * NOT returned by `GET /gigs/:id` (see transformGigResponse on the server).
+   * Determine the booked artist from the ACCEPTED bid instead.
+   */
   acceptedBid?: string
   acceptedArtist?: string
   bidsCount?: number
@@ -126,12 +138,25 @@ export interface GigListItem {
 // Bid Types
 export type BidStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN'
 
+/**
+ * The artist stub the server attaches to a bid. NOT a `User`: the bid transform
+ * (server/src/modules/bids/bids.service.ts) renames `profilePicture` to
+ * `profileImage` and sends only these four artistProfile fields. Typing this as
+ * `User` is what let `bid.artist.profilePicture` (always undefined) typecheck.
+ */
+export interface BidArtist {
+  id: string
+  name?: string
+  profileImage?: string
+  artistProfile?: Partial<ArtistProfile>
+}
+
 export interface Bid {
   id: string
   gigId: string
   gig?: Gig
   artistId: string
-  artist?: User
+  artist?: BidArtist
   amount: number
   proposal: string
   status: BidStatus
@@ -139,62 +164,81 @@ export interface Bid {
   updatedAt: string
 }
 
-// Transaction Types
-export type TransactionStatus =
-  | 'PENDING_PAYMENT'
-  | 'ESCROW'
-  | 'RELEASED'
-  | 'COMPLETED'
-  | 'DISPUTED'
-  | 'REFUNDED'
+// Check-in Types
+// Mirrors server CheckInResponse (server/src/modules/checkin/checkin.schemas.ts).
+export type CheckInStatus =
+  | 'PENDING'
+  | 'CHECKED_IN'
+  | 'EVENT_STARTED'
+  | 'EVENT_ENDED'
+  | 'EXPIRED'
+  | 'CANCELLED'
 
-export interface Transaction {
+export interface CheckIn {
   id: string
   gigId: string
   bidId: string
-  clientId: string
   artistId: string
-  amount: number
-  platformFee: number
-  artistPayout: number
-  status: TransactionStatus
-  paymentId?: string
+  organizerId: string
+  status: CheckInStatus
+  /** Organizer-only fields — omitted in artist-facing responses. */
+  otp?: string
+  otpExpiresAt?: string
+  otpRegenerateCount?: number
+  artistCheckedInAt?: string
+  eventStartedAt?: string
+  eventEndedAt?: string
+  endConfirmation?: {
+    organizerConfirmed: boolean
+    artistConfirmed: boolean
+  }
+  artistLocation?: {
+    lat: number
+    lng: number
+    capturedAt: string
+  }
   createdAt: string
   updatedAt: string
 }
 
-// Check-in Types
-export interface CheckIn {
-  id: string
-  gigId: string
+/** GET /checkin/otp/:gigId (organizer only) */
+export interface OtpInfo {
   otp: string
-  isVerified: boolean
-  checkedInAt?: string
-  eventEndedByClient: boolean
-  eventEndedByArtist: boolean
-  eventEndedAt?: string
+  expiresAt: string
+  regenerateCount: number
+  maxRegenerations: number
 }
 
 // Review Types
 export type ReviewType = 'CLIENT_TO_ARTIST' | 'ARTIST_TO_CLIENT'
 
+export interface ReviewParty {
+  id: string
+  name?: string
+  profilePicture?: string
+}
+
 export interface Review {
   id: string
   gigId: string
-  reviewerId: string
-  revieweeId: string
+  reviewer: ReviewParty
+  reviewee: ReviewParty
   type: ReviewType
   rating: number
-  ratings: {
-    professionalism: number
-    quality: number
-    value: number
-    communication: number
+  ratings?: {
+    professionalism?: number
+    quality?: number
+    value?: number
+    communication?: number
   }
-  title: string
+  title?: string
   comment: string
   wouldRecommend: boolean
-  response?: string
+  response?: {
+    comment: string
+    createdAt: string
+  }
+  status: string
   createdAt: string
   updatedAt: string
 }
@@ -202,12 +246,8 @@ export interface Review {
 export interface ReviewStats {
   averageRating: number
   totalReviews: number
-  ratings: {
-    professionalism: number
-    quality: number
-    value: number
-    communication: number
-  }
+  /** Counts of reviews per star value, keyed '1'..'5'. */
+  ratingBreakdown?: Record<string, number>
   recommendationRate: number
 }
 
@@ -233,14 +273,6 @@ export interface PaginationMeta {
 export interface PaginatedData<T> {
   data: T[]
   meta: PaginationMeta
-}
-
-// Full paginated API response
-export interface PaginatedResponse<T> {
-  success: boolean
-  data: PaginatedData<T>
-  message?: string
-  timestamp?: string
 }
 
 // Backend error response formats (supports multiple formats)
@@ -358,13 +390,14 @@ export interface UpdateArtistProfileInput {
 export interface CreateReviewInput {
   gigId: string
   rating: number
-  ratings: {
-    professionalism: number
-    quality: number
-    value: number
-    communication: number
+  ratings?: {
+    professionalism?: number
+    quality?: number
+    value?: number
+    communication?: number
   }
-  title: string
+  title?: string
+  /** 20–2000 chars, enforced server-side. */
   comment: string
-  wouldRecommend: boolean
+  wouldRecommend?: boolean
 }

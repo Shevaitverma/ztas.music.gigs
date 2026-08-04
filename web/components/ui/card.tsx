@@ -2,7 +2,6 @@
 
 import { forwardRef, type HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
-import { motion, type HTMLMotionProps } from 'framer-motion'
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'elevated' | 'gradient' | 'glass'
@@ -51,101 +50,3 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
 )
 
 Card.displayName = 'Card'
-
-// Animated card with hover effects
-export function AnimatedCard({
-  className,
-  children,
-  variant = 'default',
-  padding = 'md',
-  hoverable,
-  ...props
-}: CardProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className={cn(
-        'rounded-2xl overflow-hidden',
-        cardVariants[variant],
-        cardPadding[padding],
-        'transition-shadow duration-300 hover:shadow-xl hover:shadow-violet-500/10',
-        className
-      )}
-    >
-      {children}
-    </motion.div>
-  )
-}
-
-// Card header component
-export function CardHeader({
-  className,
-  children,
-  ...props
-}: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={cn('mb-4', className)} {...props}>
-      {children}
-    </div>
-  )
-}
-
-// Card title component
-export function CardTitle({
-  className,
-  children,
-  ...props
-}: HTMLAttributes<HTMLHeadingElement>) {
-  return (
-    <h3
-      className={cn('text-lg font-semibold text-foreground', className)}
-      {...props}
-    >
-      {children}
-    </h3>
-  )
-}
-
-// Card description
-export function CardDescription({
-  className,
-  children,
-  ...props
-}: HTMLAttributes<HTMLParagraphElement>) {
-  return (
-    <p className={cn('text-sm text-foreground-muted mt-1', className)} {...props}>
-      {children}
-    </p>
-  )
-}
-
-// Card content
-export function CardContent({
-  className,
-  children,
-  ...props
-}: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={cn('', className)} {...props}>
-      {children}
-    </div>
-  )
-}
-
-// Card footer
-export function CardFooter({
-  className,
-  children,
-  ...props
-}: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn('mt-4 pt-4 border-t border-white/5 flex items-center gap-3', className)}
-      {...props}
-    >
-      {children}
-    </div>
-  )
-}

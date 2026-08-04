@@ -90,6 +90,4 @@ export const FlagReviewSchema = t.Object({
 export type CreateReviewDto = typeof CreateReviewSchema.static;
 export type UpdateReviewDto = typeof UpdateReviewSchema.static;
 export type ReviewResponseDto = typeof ReviewResponseSchema.static;
-export type AdminUpdateReviewDto = typeof AdminUpdateReviewSchema.static;
 export type SearchReviewsDto = typeof SearchReviewsSchema.static;
-export type FlagReviewDto = typeof FlagReviewSchema.static;

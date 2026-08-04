@@ -2,12 +2,12 @@
 
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
-import { Star, MessageSquare, ThumbsUp, Calendar, User } from 'lucide-react'
+import { Star, MessageSquare, ThumbsUp, Calendar } from 'lucide-react'
 import { Card, Avatar } from '@/components/ui'
 import { reviewsApi } from '@/lib/api'
 import { useAuth } from '@/lib/providers'
 import { cn, formatDate } from '@/lib/utils'
-import type { Review, ReviewStats } from '@/lib/types'
+import type { Review } from '@/lib/types'
 
 function StarRating({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'md' }) {
   const sizeClass = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'
@@ -26,7 +26,17 @@ function StarRating({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'md
   )
 }
 
-function RatingBar({ label, value, max = 5 }: { label: string; value: number; max?: number }) {
+function RatingBar({
+  label,
+  value,
+  max = 5,
+  format = 'score',
+}: {
+  label: string
+  value: number
+  max?: number
+  format?: 'score' | 'count'
+}) {
   const percentage = (value / max) * 100
   return (
     <div className="flex items-center gap-3">
@@ -37,7 +47,9 @@ function RatingBar({ label, value, max = 5 }: { label: string; value: number; ma
           style={{ width: `${percentage}%` }}
         />
       </div>
-      <span className="text-sm font-medium text-foreground w-8">{value.toFixed(1)}</span>
+      <span className="text-sm font-medium text-foreground w-8">
+        {format === 'count' ? value : value.toFixed(1)}
+      </span>
     </div>
   )
 }
@@ -46,11 +58,17 @@ function ReviewCard({ review }: { review: Review }) {
   return (
     <Card variant="elevated" className="p-5">
       <div className="flex items-start gap-4">
-        <Avatar name={review.reviewerId} size="md" />
+        <Avatar
+          src={review.reviewer?.profilePicture}
+          name={review.reviewer?.name || 'Reviewer'}
+          size="md"
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <h3 className="font-semibold text-foreground">{review.title}</h3>
+              <h3 className="font-semibold text-foreground">
+                {review.title || review.reviewer?.name || 'Review'}
+              </h3>
               <div className="flex items-center gap-2 mt-1">
                 <StarRating rating={review.rating} />
                 <span className="text-sm text-foreground-muted">
@@ -66,16 +84,18 @@ function ReviewCard({ review }: { review: Review }) {
 
           <p className="mt-3 text-foreground-muted">{review.comment}</p>
 
-          {/* Rating breakdown */}
+          {/* Rating breakdown — sub-ratings are optional on the server */}
           <div className="mt-4 grid grid-cols-2 gap-2">
-            {Object.entries(review.ratings).map(([key, value]) => (
-              <div key={key} className="flex items-center justify-between text-sm">
-                <span className="text-foreground-subtle capitalize">
-                  {key.replace(/([A-Z])/g, ' $1').trim()}
-                </span>
-                <span className="text-foreground">{value}/5</span>
-              </div>
-            ))}
+            {Object.entries(review.ratings ?? {})
+              .filter(([, value]) => typeof value === 'number')
+              .map(([key, value]) => (
+                <div key={key} className="flex items-center justify-between text-sm">
+                  <span className="text-foreground-subtle capitalize">
+                    {key.replace(/([A-Z])/g, ' $1').trim()}
+                  </span>
+                  <span className="text-foreground">{value}/5</span>
+                </div>
+              ))}
           </div>
 
           {review.wouldRecommend && (
@@ -89,7 +109,7 @@ function ReviewCard({ review }: { review: Review }) {
             <div className="mt-4 p-3 rounded-xl bg-surface border border-white/5">
               <p className="text-sm text-foreground-muted">
                 <span className="font-medium text-foreground">Your response: </span>
-                {review.response}
+                {review.response.comment}
               </p>
             </div>
           )}
@@ -115,7 +135,9 @@ export default function ArtistReviewsPage() {
   })
 
   const isLoading = statsLoading || reviewsLoading
-  const reviewsList = reviews?.data || []
+  // `/reviews/user/:id` is paginated: ApiResponse<{ data: Review[], meta }>.
+  // Reading `reviews.data` alone handed a plain object to `.map()`.
+  const reviewsList = reviews?.data?.data ?? []
   const reviewStats = stats?.data
 
   return (
@@ -167,13 +189,19 @@ export default function ArtistReviewsPage() {
                 )}
               </div>
 
-              {/* Rating Breakdown */}
-              {reviewStats.ratings && (
+              {/* Star distribution. The server returns counts per star
+                  (`ratingBreakdown`), not per-facet averages. */}
+              {reviewStats.ratingBreakdown && (
                 <div className="space-y-3">
-                  <RatingBar label="Professionalism" value={reviewStats.ratings.professionalism ?? 0} />
-                  <RatingBar label="Quality" value={reviewStats.ratings.quality ?? 0} />
-                  <RatingBar label="Value" value={reviewStats.ratings.value ?? 0} />
-                  <RatingBar label="Communication" value={reviewStats.ratings.communication ?? 0} />
+                  {([5, 4, 3, 2, 1] as const).map((star) => (
+                    <RatingBar
+                      key={star}
+                      label={`${star} star${star === 1 ? '' : 's'}`}
+                      value={reviewStats.ratingBreakdown?.[String(star)] ?? 0}
+                      max={Math.max(reviewStats.totalReviews, 1)}
+                      format="count"
+                    />
+                  ))}
                 </div>
               )}
             </div>

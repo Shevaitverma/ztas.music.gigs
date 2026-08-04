@@ -1,5 +1,34 @@
 # Landing Page Content Revamp - Complete ✅
 
+> ## ⚠️ Historical record of one 2026-05 content pass. Superseded — the page has changed since.
+>
+> Audited 2026-08-04. The *direction* described here (streaming platform → gig
+> marketplace) did happen and still holds. The *details* are stale, and two of
+> them are now flatly wrong:
+>
+> - **§4 Pricing Section is obsolete.** The three subscription tiers it
+>   describes — Artists Free ₹0, Artists Pro ₹499/mo, Venue Owners ₹999/mo — **no
+>   longer exist and are not the business model.** `pricing-section.tsx` now
+>   shows "Free to Join" (₹0/forever), "Pay When You Book"
+>   (~10–12% *planned* commission) and "Early Access" (beta). There are no
+>   subscriptions. Quoting the ₹499/₹999 tiers to anyone would misrepresent
+>   pricing.
+> - **The invented stats are gone.** "5000+ Artists", "2000+ Gigs Posted",
+>   "50+ Cities" and "Success Rate" no longer appear in `hero-section.tsx` or
+>   `cta-section.tsx` — they were fabricated numbers for a pre-launch product and
+>   were removed. Do not put them back.
+> - **§10 / "Tech Stack (Unchanged)" says Next.js 15.** It is Next 16.1.4.
+> - **The "Content Alignment with Server" checklist overstates the backend.**
+>   "Real-time notifications ✅" is not true in any user-visible sense — the
+>   server writes notification rows and has no push/SMS/email delivery at all.
+>
+> Live copy now correctly labels escrow, OTP-based payment release and the
+> commission as planned/beta rather than shipped, which matches reality: there is
+> no payments code in the platform. Keep it that way.
+>
+> Kept as a record of why the content is what it is. Do not use it as a
+> description of the current page — read `src/components/sections/` for that.
+
 ## Summary
 Transformed the landing page from a **music streaming/creation platform** to a **live music gig marketplace** platform, aligning with the actual server implementation.
 

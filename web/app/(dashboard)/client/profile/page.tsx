@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import {
   User,
   MapPin,
@@ -22,7 +22,6 @@ import toast from 'react-hot-toast'
 
 export default function ClientProfilePage() {
   const { user, refetchUser } = useAuth()
-  const queryClient = useQueryClient()
   const [isEditing, setIsEditing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 

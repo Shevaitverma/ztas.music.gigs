@@ -1,5 +1,35 @@
 # ZTS Music Platform - Data Models Design
 
+> ## ⚠️ STALE PLANNING DOC — superseded by the code. Do not treat as schema reference.
+>
+> Audited 2026-08-04. Two structural problems with this file:
+>
+> 1. **It lives in `landing/docs/` but describes the whole platform**, not the
+>    marketing site. It predates the current repo layout. The authoritative
+>    schema is `server/src/db/models/` — 13 Mongoose models. Read those.
+> 2. **The "new" models it proposes have diverged or were never built:**
+>    - *Payment System Models* — ❌ **not built at all.** There is no payment,
+>      transaction or escrow model on the server, and no gateway integration.
+>      This remains a proposal.
+>    - *Messaging Models* — ❌ **not built.** There is no messaging feature and
+>      no route for one.
+>    - *Notification Models* — ⚠️ built, but differently. See
+>      `notification.model.ts`. Note the backend has **no delivery channel** —
+>      no push, SMS or email — so notifications are rows nobody is told about.
+>    - *Review & Rating Models* — ⚠️ built, but differently. See
+>      `review.model.ts`.
+>    - *Media/Upload and Extended User Models* — partially absorbed into
+>      `user.model.ts` and the S3 service.
+>
+> The "Existing Models" tables below are also drifting: `role` values are
+> lowercase strings (`client | artist | admin`), not uppercase; `refreshToken`
+> is stored as a SHA-256 hex digest, not a raw JWT; and the file omits the
+> models added since it was written (`Bid`, `EventCheckIn`, `Review`, `Report`,
+> `Notification`, `ArtistVerification`, `OrganizerVerification`, `ActivityLog`).
+>
+> Kept for the design rationale behind the unbuilt payment models, which is
+> still the best written justification we have. Not deleted, not authoritative.
+
 > Complete schema design for all features (existing + new)
 
 ---

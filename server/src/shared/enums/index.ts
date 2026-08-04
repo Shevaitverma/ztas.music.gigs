@@ -80,16 +80,6 @@ export enum BidStatus {
   CANCELLED = 'CANCELLED',
 }
 
-export enum VenueType {
-  RESTAURANT = 'RESTAURANT',
-  BAR = 'BAR',
-  ROOFTOP = 'ROOFTOP',
-  CAFE = 'CAFE',
-  CLUB = 'CLUB',
-  HOTEL = 'HOTEL',
-  OTHER = 'OTHER',
-}
-
 /**
  * Performance Type Enum - Type of artist performance
  */

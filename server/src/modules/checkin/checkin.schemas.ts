@@ -31,19 +31,6 @@ export const VerifyOtpSchema = t.Object({
 export type VerifyOtpDto = typeof VerifyOtpSchema.static;
 
 /**
- * End Event Schema
- * Both parties use this to confirm the event has ended
- */
-export const EndEventSchema = t.Object({
-  gigId: t.String({ description: 'The gig ID to end' }),
-});
-
-/**
- * End Event DTO
- */
-export type EndEventDto = typeof EndEventSchema.static;
-
-/**
  * Check-In Response
  */
 export interface CheckInResponse {

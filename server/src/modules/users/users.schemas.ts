@@ -80,18 +80,3 @@ export const UpdateProfileSchema = t.Object({
   artistProfile: t.Optional(ArtistProfileUpdateSchema),
   clientProfile: t.Optional(ClientProfileUpdateSchema),
 });
-
-/**
- * Search Artists Schema
- */
-export const SearchArtistsSchema = t.Object({
-  query: t.Optional(t.String()),
-  genre: t.Optional(t.Enum(MusicGenre)),
-  performanceType: t.Optional(t.Enum(PerformanceType)),
-  city: t.Optional(t.String()),
-  page: t.Optional(t.Numeric({ default: 1 })),
-  limit: t.Optional(t.Numeric({ default: 20 })),
-  lat: t.Optional(t.Numeric()),
-  lng: t.Optional(t.Numeric()),
-  distance: t.Optional(t.Numeric({ default: 50000 })), // meters
-});

@@ -3,6 +3,7 @@
 import { useAtom } from 'jotai'
 import { type ReactNode, useEffect } from 'react'
 import { authApi } from '@/lib/api/auth'
+import { identify } from '@/lib/analytics'
 import { userAtom } from '@/lib/atoms/auth'
 
 /**
@@ -16,7 +17,11 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
   const [user, setUser] = useAtom(userAtom)
 
   useEffect(() => {
-    if (user) return
+    if (user) {
+      // ID and role only — never the admin's name or email.
+      identify(user.id, user.role)
+      return
+    }
     let cancelled = false
     authApi
       .me()

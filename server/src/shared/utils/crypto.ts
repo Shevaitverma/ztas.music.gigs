@@ -90,9 +90,17 @@ export function resetCryptoFallbackCounter(): void {
 }
 
 /**
- * Encrypt a plaintext string with an AAD binding (e.g. `"users.panNumber"`).
- * The AAD is authenticated by GCM but not stored in the ciphertext, so an
- * attacker cannot transplant ciphertext between fields/collections.
+ * Encrypt a plaintext string with an AAD binding — a static field path, e.g.
+ * `"organizerVerifications.business.panNumber"`. The AAD is authenticated by
+ * GCM but not stored in the ciphertext, so an attacker cannot transplant
+ * ciphertext between fields/collections.
+ *
+ * SCOPE: the AAD is the field path and nothing else — it carries no userId or
+ * other per-record component, so it does NOT bind ciphertext to a particular
+ * document. Moving ciphertext between two rows of the *same* field still
+ * verifies. Adding a per-record component would require re-encrypting every
+ * existing row. The six live AADs are declared in
+ * `src/db/models/{artist,organizer}-verification.model.ts`.
  *
  * Returns a base64 payload prefixed with `enc:v1:`. If `plaintext` is already
  * encrypted (has the prefix), returns it unchanged.
@@ -131,8 +139,10 @@ export function encryptPii(
  * fails, we retry decryption WITHOUT AAD so legacy rows still read. A one-time
  * warning is logged per process.
  *
- * TODO(crypto-aad-migration): remove the `decryptWithoutAad` fallback once a
- * migration sweep has re-encrypted every PII field with AAD bindings.
+ * TODO(crypto-aad-migration): remove the `catch (aadErr)` retry block below
+ * once `scripts/reencrypt-pii-with-aad.ts` has re-encrypted every PII field
+ * with AAD bindings and a live run reports `legacyDecrypts: 0`. (There is no
+ * function named `decryptWithoutAad` — the fallback is inline.)
  */
 export function decryptPii(
   payload: string | undefined | null,
@@ -191,61 +201,6 @@ export function decryptPii(
 }
 
 /**
- * @deprecated Use {@link encryptPii} with an AAD binding instead.
- * Retained for backward compatibility during AAD migration.
- */
-export function encrypt(plaintext: string | undefined | null): string | undefined {
-  if (plaintext === undefined || plaintext === null || plaintext === '') {
-    return plaintext === '' ? '' : undefined;
-  }
-  if (typeof plaintext !== 'string') {
-    return plaintext;
-  }
-  if (plaintext.startsWith(ENCRYPTED_PREFIX)) {
-    return plaintext;
-  }
-
-  const key = getKey();
-  const iv = crypto.randomBytes(IV_LENGTH);
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
-  const authTag = cipher.getAuthTag();
-  const payload = Buffer.concat([iv, authTag, ciphertext]).toString('base64');
-  return ENCRYPTED_PREFIX + payload;
-}
-
-/**
- * @deprecated Use {@link decryptPii} with an AAD binding instead.
- * Retained for backward compatibility during AAD migration.
- */
-export function decrypt(payload: string | undefined | null): string | undefined {
-  if (payload === undefined || payload === null || payload === '') {
-    return payload === '' ? '' : undefined;
-  }
-  if (typeof payload !== 'string') {
-    return payload;
-  }
-  if (!payload.startsWith(ENCRYPTED_PREFIX)) {
-    return payload;
-  }
-
-  try {
-    const key = getKey();
-    const buf = Buffer.from(payload.slice(ENCRYPTED_PREFIX.length), 'base64');
-    const iv = buf.subarray(0, IV_LENGTH);
-    const authTag = buf.subarray(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
-    const ciphertext = buf.subarray(IV_LENGTH + AUTH_TAG_LENGTH);
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-    decipher.setAuthTag(authTag);
-    const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-    return plaintext.toString('utf8');
-  } catch (err) {
-    cryptoLogger.error('Failed to decrypt encrypted field', err);
-    throw new Error('Failed to decrypt field');
-  }
-}
-
-/**
  * Mask a sensitive string to show only the last `visible` chars.
  * Returns plaintext if the input is shorter than `visible`.
  */
@@ -253,11 +208,4 @@ export function maskLast(value: string | undefined | null, visible: number = 4):
   if (!value) return '';
   if (value.length <= visible) return '*'.repeat(value.length);
   return '*'.repeat(Math.max(0, value.length - visible)) + value.slice(-visible);
-}
-
-/**
- * True if the given string is in our encrypted format.
- */
-export function isEncrypted(value: unknown): boolean {
-  return typeof value === 'string' && value.startsWith(ENCRYPTED_PREFIX);
 }

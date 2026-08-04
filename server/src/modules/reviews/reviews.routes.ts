@@ -5,14 +5,13 @@ import {
   UpdateReviewSchema,
   ReviewResponseSchema,
   AdminUpdateReviewSchema,
-  SearchReviewsSchema,
   FlagReviewSchema,
 } from './reviews.schemas';
-import { UserRole, ReviewType } from '../../shared/enums';
+import { AdminPermission, ReviewType } from '../../shared/enums';
 import { getAuthUser, type RouteContext } from '../../shared/types/auth.types';
 import { transformPlugin } from '../../plugins/transform.plugin';
-import { ForbiddenException } from '../../plugins/error.plugin';
 import { validateObjectId } from '../../shared/utils/validation.utils';
+import { requirePermission } from '../../shared/constants/admin-permissions';
 
 /**
  * Reviews Routes
@@ -280,10 +279,7 @@ export const reviewsRoutes = (reviewsService: ReviewsService) =>
     .put(
       '/:id/admin',
       async (ctx) => {
-        const user = getAuthUser(ctx);
-        if (user.role !== UserRole.ADMIN) {
-          throw new ForbiddenException('Admin access required');
-        }
+        requirePermission(AdminPermission.MODERATE_REVIEWS)(ctx);
         const context = ctx as RouteContext;
         const { id } = context.params;
         validateObjectId(id, 'reviewId');

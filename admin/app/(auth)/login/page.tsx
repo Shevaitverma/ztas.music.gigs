@@ -2,7 +2,7 @@
 
 import { useSetAtom } from 'jotai'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import { ApiClientError } from '@/lib/api/client'
 import { userAtom } from '@/lib/atoms/auth'
 import { signInWithGoogle } from '@/lib/firebase/google-auth'
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const setUser = useSetAtom(userAtom)
@@ -99,5 +99,19 @@ export default function LoginPage() {
         </Button>
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * `useSearchParams` suspends during prerender. Without this boundary Next 16.0.6
+ * fails the production build outright:
+ *   "useSearchParams() should be wrapped in a suspense boundary at page /login"
+ * (web/ runs 16.1.5, which tolerates it — hence this only broke in admin.)
+ */
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
   )
 }

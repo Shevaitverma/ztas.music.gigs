@@ -1,4 +1,4 @@
-import { ReviewModel, GigModel, UserModel, Review } from '../../db/models';
+import { ReviewModel, GigModel, Review } from '../../db/models';
 import {
   NotFoundException,
   BadRequestException,

@@ -2,6 +2,28 @@
 
 > This document outlines features to be implemented in upcoming sessions.
 
+> ## ⚠️ Status header — added 2026-08-04
+>
+> Most of this roadmap has **shipped** since it was written, and one large piece
+> has not. Reading it front-to-back will leave you with the wrong picture, so
+> here is the reconciliation against actual code. The per-section designs below
+> are still useful as *rationale*; they are no longer a to-do list.
+>
+> | § | Topic | Actual status |
+> |---|---|---|
+> | 1 | Reverse-auction bidding + improvements | ✅ **Shipped.** Auto-reject on accept, cascade on cancel/close, and `POST /gigs/:id/complete` all exist (`bids.service.ts`, `gigs.routes.ts:390`) |
+> | 2 | Payment & Escrow | ❌ **Not started. Nothing exists.** No `Transaction` model, no `TransactionStatus` enum server-side, no gateway, no routes. This section is a pure design proposal and is the single largest gap in the platform |
+> | 3 | Event Check-in OTP | ⚠️ **Server shipped, no UI.** `EventCheckIn` model + `src/modules/checkin/` are complete, with CSPRNG OTPs and a 5-strike/15-min lockout. No client surface calls them, so users cannot reach the feature |
+> | 4 | Verification systems | ✅ **Shipped**, both artist and organizer, with PII encrypted at rest and an admin approve/reject queue. (The admin queue was itself broken until 2026-08-04 — see `PROJECT_CONTEXT.md`) |
+> | 5 | Admin dashboard enhancements | ⚠️ **Server shipped, UI partial.** Analytics, storage-stats, activity-log and admin-permission endpoints all exist. The admin app has only 5 pages and consumes none of the analytics endpoints |
+> | 6 | User activity logging | ✅ **Shipped** — `activity-log.model.ts`, `activity-log.service.ts`, gated by `ENABLE_ACTIVITY_LOGGING` |
+> | 7 | Priority order | Superseded — see the corrected version at the end of this file |
+>
+> Also worth knowing, because this roadmap does not mention them: reviews and
+> reports were built and are server-complete, notifications exist as DB rows
+> only (no push/SMS/email delivery of any kind), and the whole post-booking user
+> journey has no UI. See `server/USER_FLOW_DIAGRAM.md`.
+
 ---
 
 ## Table of Contents
@@ -207,7 +229,19 @@ async completeGig(gigId: string, userId: string): Promise<Gig> {
 
 ---
 
-## 2. Payment & Escrow System
+## 2. Payment & Escrow System — ❌ PLANNED, NOTHING IMPLEMENTED
+
+> **This section is a design proposal, not a description of code.** As of
+> 2026-08-04 there is no `Transaction` model, no `TransactionStatus` enum in
+> `src/shared/enums/`, no payment-gateway dependency in `package.json`, and no
+> `/transactions/*` route. Other documents in this repo have repeated the state
+> machine below as though it were built — it is not. If you are here to
+> integrate a gateway, everything below is greenfield.
+>
+> The only related artifacts anywhere are two forward-looking comments in
+> `src/services/scheduler.service.ts` ("once escrow is wired…"). Orphan
+> `Transaction` / `TransactionStatus` TS types in `web/lib/types.ts` were
+> deleted on 2026-08-04 — nothing had ever constructed or read them.
 
 ### Overview
 Platform holds money from Venue in escrow. After successful event completion (verified by OTP check-in), funds are released minus platform cut.
@@ -1051,31 +1085,46 @@ class BidsService {
 
 ## 7. Priority Order
 
-### Phase 1: Core Bidding Improvements (Current Session)
-1. **Auto-reject bids on accept** - When one bid is accepted, others are rejected
-2. **Cascade on gig cancel/close** - Reject pending bids automatically
-3. **Add /gigs/:id/complete endpoint** - Complete the gig lifecycle
+> **Superseded. Reconciled against code 2026-08-04.** The original ordering is
+> preserved below with real status against each line, because the *sequence*
+> reasoning is still sound even though most items are done.
+
+### Phase 1: Core Bidding Improvements
+1. ✅ **Auto-reject bids on accept** — done, `bids.service.ts`
+2. ✅ **Cascade on gig cancel/close** — done
+3. ✅ **Add /gigs/:id/complete endpoint** — done, `gigs.routes.ts:390`
 
 ### Phase 2: Payment & Check-in
-4. **Transaction/Escrow model** - Hold payments
-5. **Event Check-in OTP system** - Verify artist attendance
-6. **Payment release flow** - After successful event
+4. ❌ **Transaction/Escrow model** — not started; nothing exists
+5. ⚠️ **Event Check-in OTP system** — server done, no client UI
+6. ❌ **Payment release flow** — not started (blocked on 4)
 
 ### Phase 3: Verification
-7. **Artist verification** - Identity + Bank (for payouts)
-8. **Venue verification** - Identity + Venue ownership
-9. **Admin verification workflow**
+7. ✅ **Artist verification** — done (identity + bank, PII encrypted at rest)
+8. ✅ **Venue/organizer verification** — done (identity + business + venue proof)
+9. ✅ **Admin verification workflow** — done; admin UI fixed 2026-08-04
 
 ### Phase 4: Admin Enhancements
-10. **Activity logging system** - Track all actions
-11. **Analytics dashboard** - Metrics & reports
-12. **Storage management** - Track & cleanup
-13. **Admin roles & permissions** - Granular access control
+10. ✅ **Activity logging system** — done, gated by `ENABLE_ACTIVITY_LOGGING`
+11. ⚠️ **Analytics dashboard** — server endpoints done, no admin UI consumes them
+12. ⚠️ **Storage management** — `GET /admin/storage/stats` done, no UI, no cleanup job
+13. ✅ **Admin roles & permissions** — done, `shared/constants/admin-permissions.ts`
 
 ### Phase 5: Nice-to-haves
-14. **Notification system** - Push/Email
-15. **Real-time features** - WebSocket for live updates
-16. **Export functionality** - CSV/Excel reports
+14. ⚠️ **Notification system** — DB records only. **No delivery channel of any
+    kind exists** — no FCM, APNs, Twilio, SendGrid or SMTP dependency or call
+    site anywhere in `server/src`. A notification today is a row nobody is told about
+15. ✅ **Real-time features** — WebSocket gateways live for bids and admin
+16. ⚠️ **Export functionality** — `GET /admin/analytics/export` exists; no UI
+
+### What actually remains, in priority order
+1. **Payments / escrow / payouts** (§2) — the entire monetization spine, unbuilt
+2. **Post-booking UI** — check-in OTP and review submission are backend-complete
+   and unreachable by users; this is the cheapest large win on the list
+3. **Notification delivery** — pick one channel and wire it
+4. **Rate limiting** — the limiter is written but its Elysia hook never
+   executes, so nothing is throttled today. See `PROJECT_CONTEXT.md`
+   § "Rate limiting / proxy trust"
 
 ---
 

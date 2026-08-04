@@ -65,13 +65,6 @@ export function truncate(str: string, length: number): string {
   return str.slice(0, length) + '...'
 }
 
-export function slugify(str: string): string {
-  return str
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-}
-
 export function getInitials(name: string): string {
   return name
     .split(' ')
@@ -79,22 +72,6 @@ export function getInitials(name: string): string {
     .join('')
     .toUpperCase()
     .slice(0, 2)
-}
-
-export function getStatusColor(status: string): string {
-  const colors: Record<string, string> = {
-    DRAFT: 'bg-zinc-500/20 text-zinc-400',
-    LIVE: 'bg-emerald-500/20 text-emerald-400',
-    BOOKED: 'bg-violet-500/20 text-violet-400',
-    CLOSED: 'bg-amber-500/20 text-amber-400',
-    COMPLETED: 'bg-blue-500/20 text-blue-400',
-    CANCELLED: 'bg-rose-500/20 text-rose-400',
-    PENDING: 'bg-amber-500/20 text-amber-400',
-    ACCEPTED: 'bg-emerald-500/20 text-emerald-400',
-    REJECTED: 'bg-rose-500/20 text-rose-400',
-    WITHDRAWN: 'bg-zinc-500/20 text-zinc-400',
-  }
-  return colors[status] || 'bg-zinc-500/20 text-zinc-400'
 }
 
 export function getCategoryIcon(category: string): string {

@@ -70,7 +70,7 @@ export function CtaSection() {
               }}
             >
               <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-              Free to join • Pay only when you book
+              Free to join • No subscriptions
             </div>
 
             <h2

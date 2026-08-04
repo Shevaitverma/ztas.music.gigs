@@ -1,5 +1,6 @@
 import * as nodeCrypto from 'node:crypto';
-import { EventCheckInModel, GigModel, BidModel, EventCheckIn } from '../../db/models';
+import { EventCheckInModel, GigModel, EventCheckIn, NotificationType } from '../../db/models';
+import { notificationsService } from '../notifications/notifications.service';
 import {
   NotFoundException,
   BadRequestException,
@@ -7,8 +8,9 @@ import {
   ConflictException,
 } from '../../plugins/error.plugin';
 import { HttpException } from '../../shared/errors/custom-errors';
-import { CheckInStatus, GigStatus, BidStatus } from '../../shared/enums';
+import { CheckInStatus, GigStatus } from '../../shared/enums';
 import { geoDistanceMeters, OTP_GPS_TOLERANCE_METERS } from '../../shared/utils/geo';
+import { eventEndsAt, eventStartsAt, type EventTimingLike } from '../../shared/utils/event-time';
 import type { CheckInResponse, OtpResponse, VerifyOtpDto } from './checkin.schemas';
 import type { GigsService } from '../gigs/gigs.service';
 
@@ -53,28 +55,15 @@ export class CheckInService {
   }
 
   /**
-   * Calculate OTP expiration time based on event end time.
+   * Calculate OTP expiration: event end + buffer.
    *
-   * For overnight events (endTime numerically earlier than startTime, e.g.
-   * 22:00 -> 02:00), the end falls on the next day. We shift expiry forward
-   * by 24h before applying hours/minutes so the OTP doesn't expire 20 hours
-   * before the event ends.
+   * `eventEndsAt` resolves the "HH:mm" end time against the app timezone (and
+   * rolls overnight events — 22:00 -> 02:00 — onto the next calendar day), so
+   * expiry lands on the right real-world instant no matter what TZ the server
+   * process runs in.
    */
-  private calculateOtpExpiry(eventDate: Date, startTime: string, endTime: string): Date {
-    const [endHours, endMinutes] = endTime.split(':').map(Number);
-    const [startHours, startMinutes] = startTime.split(':').map(Number);
-
-    const expiryDate = new Date(eventDate);
-
-    const endMinutesOfDay = endHours * 60 + endMinutes;
-    const startMinutesOfDay = startHours * 60 + startMinutes;
-    if (endMinutesOfDay <= startMinutesOfDay) {
-      // Overnight event: end time is on the calendar day after `eventDate`.
-      expiryDate.setDate(expiryDate.getDate() + 1);
-    }
-
-    expiryDate.setHours(endHours + OTP_BUFFER_HOURS, endMinutes, 0, 0);
-    return expiryDate;
+  private calculateOtpExpiry(timing: EventTimingLike): Date {
+    return new Date(eventEndsAt(timing).getTime() + OTP_BUFFER_HOURS * 60 * 60 * 1000);
   }
 
   /**
@@ -103,14 +92,12 @@ export class CheckInService {
       throw new BadRequestException('No accepted bid for this gig');
     }
 
-    // Check if within valid time window (event day or 30 mins before)
+    // Check if within valid time window (30 mins before the event starts).
+    // The start instant is resolved in the app timezone, not the server's.
     const now = new Date();
-    const eventDate = new Date(gig.eventTiming.date);
-    const [startHours, startMins] = gig.eventTiming.startTime.split(':').map(Number);
-    eventDate.setHours(startHours, startMins, 0, 0);
-
-    // Allow OTP generation 30 mins before event start
-    const earliestOtpTime = new Date(eventDate.getTime() - 30 * 60 * 1000);
+    const earliestOtpTime = new Date(
+      eventStartsAt(gig.eventTiming).getTime() - 30 * 60 * 1000
+    );
 
     if (now < earliestOtpTime) {
       throw new BadRequestException(
@@ -137,11 +124,7 @@ export class CheckInService {
       // Regenerate OTP
       checkIn.otp = this.createOtpCode();
       checkIn.otpGeneratedAt = now;
-      checkIn.otpExpiresAt = this.calculateOtpExpiry(
-        gig.eventTiming.date,
-        gig.eventTiming.startTime,
-        gig.eventTiming.endTime
-      );
+      checkIn.otpExpiresAt = this.calculateOtpExpiry(gig.eventTiming);
       checkIn.otpRegenerateCount += 1;
       // Reset brute-force counters on regeneration so the artist isn't
       // locked out by a stale lock from a previous OTP value.
@@ -157,17 +140,25 @@ export class CheckInService {
         organizer: userId,
         otp: this.createOtpCode(),
         otpGeneratedAt: now,
-        otpExpiresAt: this.calculateOtpExpiry(
-          gig.eventTiming.date,
-          gig.eventTiming.startTime,
-          gig.eventTiming.endTime
-        ),
+        otpExpiresAt: this.calculateOtpExpiry(gig.eventTiming),
         otpRegenerateCount: 0,
         otpAttempts: 0,
         status: CheckInStatus.PENDING,
       });
       await checkIn.save();
     }
+
+    // Fire-and-forget: `create` never throws, so a delivery failure cannot
+    // block the organizer from getting their OTP.
+    // NOTE: the OTP itself is deliberately NOT included — the artist reads it
+    // off the organizer's screen at the venue; emailing it defeats the check.
+    void notificationsService.create({
+      userId: gig.acceptedArtist,
+      type: NotificationType.CHECKIN_OTP_READY,
+      title: `Check-in is open for "${gig.title}"`,
+      message: `The organizer has generated your check-in code for "${gig.title}". Ask them for the 6-digit OTP at the venue to check in.`,
+      data: { gigId: gig._id.toString(), checkInId: checkIn._id.toString() },
+    });
 
     return this.transformCheckInResponse(checkIn, true);
   }

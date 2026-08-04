@@ -3,7 +3,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useMemo } from 'react'
+import { Suspense, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { UserFilters } from '@/components/users/user-filters'
 import { UserTable } from '@/components/users/user-table'
@@ -46,7 +46,7 @@ function toQuery(filters: UserListFilters): string {
   return params.toString()
 }
 
-export default function UsersListPage() {
+function UsersListPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const filters = useMemo(
@@ -138,5 +138,14 @@ export default function UsersListPage() {
         </div>
       )}
     </div>
+  )
+}
+
+/** See the note in (auth)/login/page.tsx — useSearchParams needs a boundary. */
+export default function UsersListPage() {
+  return (
+    <Suspense fallback={null}>
+      <UsersListPageInner />
+    </Suspense>
   )
 }

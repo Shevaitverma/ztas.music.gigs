@@ -1,6 +1,7 @@
-import { VenueModel, Venue } from '../../db/models';
-import { NotFoundException, ForbiddenException, BadRequestException } from '../../plugins/error.plugin';
+import { VenueModel } from '../../db/models';
+import { NotFoundException, ForbiddenException } from '../../plugins/error.plugin';
 import type { CreateVenueDto } from './venues.schemas';
+import { escapeRegex } from '../../shared/utils/validation.utils';
 
 /**
  * Venues Service
@@ -96,7 +97,7 @@ export class VenuesService {
     }
 
     if (params.city) {
-      filter.city = { $regex: params.city, $options: 'i' };
+      filter.city = { $regex: escapeRegex(params.city), $options: 'i' };
     }
 
     const venues = await VenueModel.find(filter).limit(20).exec();

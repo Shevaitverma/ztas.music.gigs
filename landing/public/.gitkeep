@@ -1,0 +1,4 @@
+# Keeps public/ tracked by git.
+# Next does not create this directory, and every Dockerfile does
+# `COPY --from=builder /app/public ./public` — if git drops the directory the
+# image build fails with: failed to compute cache key: "/app/public": not found.

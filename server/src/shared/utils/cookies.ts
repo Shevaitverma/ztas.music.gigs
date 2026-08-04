@@ -115,15 +115,3 @@ export function clearAuthCookies(cookie: CookieJar): void {
     secure,
   });
 }
-
-/**
- * Read a cookie value by name from the Elysia cookie jar. Returns undefined
- * if not present.
- */
-export function readCookie(cookie: CookieJar | undefined, name: string): string | undefined {
-  if (!cookie) return undefined;
-  const slot = cookie[name];
-  if (!slot) return undefined;
-  const v = slot.value;
-  return typeof v === 'string' && v.length > 0 ? v : undefined;
-}

@@ -282,14 +282,23 @@ export class ReportsService {
     if (params.entityType) filter['reported.entityType'] = params.entityType;
     if (params.entityId) filter['reported.entityId'] = params.entityId;
 
-    const sortField = params.sortBy || 'createdAt';
+    // Allowlisted sort fields only — an arbitrary field forces an unindexed
+    // in-memory sort, which MongoDB aborts at 32MB (→ 500).
     const sortOrder = params.sortOrder === 'asc' ? 1 : -1;
+    const sortOptions: Record<string, Record<string, 1 | -1>> = {
+      createdAt: { createdAt: sortOrder },
+      updatedAt: { updatedAt: sortOrder },
+      status: { status: sortOrder },
+      priority: { priority: sortOrder },
+      category: { category: sortOrder },
+    };
+    const sort = sortOptions[params.sortBy || 'createdAt'] || { createdAt: -1 as const };
 
     const [reports, total] = await Promise.all([
       ReportModel.find(filter)
         .populate('reporter', 'name profilePicture')
         .populate('assignedTo', 'name')
-        .sort({ [sortField]: sortOrder })
+        .sort(sort)
         .skip(skip)
         .limit(limit)
         .exec(),

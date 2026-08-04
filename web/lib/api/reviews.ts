@@ -1,9 +1,11 @@
 import { apiClient } from './client'
-import type { Review, ReviewStats, CreateReviewInput } from '@/lib/types'
+import type { Review, ReviewStats, CreateReviewInput, PaginatedData } from '@/lib/types'
 
 export const reviewsApi = {
-  create: async (data: CreateReviewInput) => {
-    return apiClient.post<Review>('/reviews', data)
+  /** Gig must be COMPLETED and the caller a participant. One review per direction. */
+  create: async (data: CreateReviewInput): Promise<Review> => {
+    const response = await apiClient.post<Review>('/reviews', data)
+    return response.data
   },
 
   getById: async (id: string) => {
@@ -19,23 +21,28 @@ export const reviewsApi = {
         }
       })
     }
-    return apiClient.get<Review[]>(`/reviews/user/${userId}?${searchParams.toString()}`)
+    // Server paginates this endpoint: { data: Review[], meta: {...} }.
+    return apiClient.get<PaginatedData<Review>>(
+      `/reviews/user/${userId}?${searchParams.toString()}`
+    )
   },
 
   getUserStats: async (userId: string) => {
     return apiClient.get<ReviewStats>(`/reviews/user/${userId}/stats`)
   },
 
-  getGigReviews: async (gigId: string) => {
-    return apiClient.get<Review[]>(`/reviews/gig/${gigId}`)
+  getGigReviews: async (gigId: string): Promise<Review[]> => {
+    const response = await apiClient.get<Review[]>(`/reviews/gig/${gigId}`)
+    return response.data
   },
 
   update: async (id: string, data: Partial<CreateReviewInput>) => {
     return apiClient.put<Review>(`/reviews/${id}`, data)
   },
 
-  respond: async (id: string, response: string) => {
-    return apiClient.post<Review>(`/reviews/${id}/response`, { response })
+  // Server body schema is { comment } (ReviewResponseSchema), not { response }.
+  respond: async (id: string, comment: string) => {
+    return apiClient.post<Review>(`/reviews/${id}/response`, { comment })
   },
 
   flag: async (id: string, reason: string) => {

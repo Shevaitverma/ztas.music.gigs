@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -15,7 +15,18 @@ export interface ModalProps {
   showCloseButton?: boolean
   closeOnOverlayClick?: boolean
   className?: string
+  /** Accessible name when the modal renders no visible `title` (see ConfirmModal). */
+  'aria-label'?: string
 }
+
+const FOCUSABLE = [
+  'a[href]',
+  'button:not([disabled])',
+  'textarea:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
 
 const modalSizes = {
   sm: 'max-w-sm',
@@ -35,7 +46,65 @@ export function Modal({
   showCloseButton = true,
   closeOnOverlayClick = true,
   className,
+  'aria-label': ariaLabel,
 }: ModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
+  const descId = useId()
+
+  // Callers pass inline arrows (`mutation.isPending ? () => {} : onClose`), so
+  // onClose is a new function every render. Keep it in a ref — if it were a
+  // dependency the effect would re-run and steal focus back mid-typing.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const focusable = () =>
+      Array.from(panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])
+
+    // Move focus in, so the next Tab starts inside the dialog.
+    ;(focusable()[0] ?? panelRef.current)?.focus()
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCloseRef.current()
+        return
+      }
+      if (e.key !== 'Tab') return
+
+      const items = focusable()
+      if (items.length === 0) {
+        e.preventDefault()
+        return
+      }
+      const first = items[0]
+      const last = items[items.length - 1]
+      const active = document.activeElement
+      const inside = !!active && !!panelRef.current?.contains(active)
+
+      if (e.shiftKey && (!inside || active === first)) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && (!inside || active === last)) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+      previouslyFocused?.focus?.()
+    }
+  }, [isOpen])
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -52,6 +121,13 @@ export function Modal({
 
           {/* Modal content */}
           <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={title ? undefined : ariaLabel}
+            aria-labelledby={title ? titleId : undefined}
+            aria-describedby={description ? descId : undefined}
+            tabIndex={-1}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -68,14 +144,20 @@ export function Modal({
               <div className="flex items-start justify-between p-5 border-b border-white/5">
                 <div>
                   {title && (
-                    <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+                    <h2 id={titleId} className="text-xl font-semibold text-foreground">
+                      {title}
+                    </h2>
                   )}
                   {description && (
-                    <p className="mt-1 text-sm text-foreground-muted">{description}</p>
+                    <p id={descId} className="mt-1 text-sm text-foreground-muted">
+                      {description}
+                    </p>
                   )}
                 </div>
                 {showCloseButton && (
                   <button
+                    type="button"
+                    aria-label="Close dialog"
                     onClick={onClose}
                     className="p-2 -mr-2 rounded-lg text-foreground-muted hover:text-foreground hover:bg-white/5 transition-colors"
                   >
@@ -117,7 +199,7 @@ export function ConfirmModal({
   isLoading?: boolean
 }) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="sm" showCloseButton={false}>
+    <Modal isOpen={isOpen} onClose={onClose} size="sm" showCloseButton={false} aria-label={title}>
       <div className="text-center">
         <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
         {description && (

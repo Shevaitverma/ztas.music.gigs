@@ -13,7 +13,7 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 import Link from 'next/link'
-import { Card, Badge, StatusBadge, Button, GigCardSkeleton } from '@/components/ui'
+import { Card, Badge, Button, GigCardSkeleton } from '@/components/ui'
 import { bidsApi, gigsApi } from '@/lib/api'
 import { formatCurrency, formatEventDate, formatTime, getCategoryIcon } from '@/lib/utils'
 import { useAuth } from '@/lib/providers'

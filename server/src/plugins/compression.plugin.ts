@@ -10,6 +10,12 @@ export const compressionPlugin = (options: { threshold?: number } = {}) => {
   const threshold = options.threshold ?? 1024; // Minimum size to compress (1KB)
 
   return new Elysia({ name: 'compression' })
+    // DELIBERATELY local-scoped (i.e. currently inert), unlike logging/error.
+    // ponytail: promoting this to `as: 'global'` registers it at app level —
+    // BEFORE each module's `transformPlugin` afterHandle — so any body over the
+    // threshold would be returned as a `Response` and skip the standard
+    // `{success,message,data}` envelope, silently breaking every large payload.
+    // Fix ordering (or move compression into a Bun/proxy layer) before enabling.
     .onAfterHandle(({ response, set, request }) => {
       // Skip if no response or it's a special type
       if (!response) return;

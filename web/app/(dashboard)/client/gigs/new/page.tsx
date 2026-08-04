@@ -7,14 +7,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
   ArrowRight,
-  Calendar,
-  DollarSign,
-  FileText,
   Check,
-  Sparkles,
 } from 'lucide-react'
 import { Card, Button, Input, DatePicker, TimePicker, VenueSelect } from '@/components/ui'
 import { gigsApi, venuesApi } from '@/lib/api'
+import { budgetBand, capture } from '@/lib/analytics'
 import { cn, getCategoryIcon, getCategoryLabel, formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import type { GigCategory, CreateGigInput } from '@/lib/types'
@@ -89,7 +86,12 @@ export default function CreateGigPage() {
 
   const createGigMutation = useMutation({
     mutationFn: (data: CreateGigInput) => gigsApi.create(data),
-    onSuccess: async (response) => {
+    onSuccess: async (response, submitted) => {
+      capture('gig_posted', {
+        category: submitted.category,
+        // Banded — never the exact budget.
+        budget_band: budgetBand(submitted.budget.max),
+      })
       // If the venue was new, save it for future use
       if (isNewVenue && formData.venue?.name && formData.venue?.city) {
         try {

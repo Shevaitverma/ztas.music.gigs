@@ -10,9 +10,11 @@ import { Button } from '@/components/ui'
 import { useAuth } from '@/lib/providers'
 import { authApi } from '@/lib/api'
 import { isRequiresRoleResponse } from '@/lib/api/auth'
+import { capture } from '@/lib/analytics'
 import { signInWithGoogle } from '@/lib/firebase/google-auth'
 import '@/lib/firebase/init' // Initialize Firebase on import
 import { cn } from '@/lib/utils'
+import { TERMS_URL, PRIVACY_URL } from '@/lib/links'
 import toast from 'react-hot-toast'
 import type { UserRole } from '@/lib/types'
 import { registrationRoleSchema } from '@/lib/schemas/auth'
@@ -45,6 +47,7 @@ export default function RegisterPage() {
       toast.error('Please select a role first')
       return
     }
+    capture('signup_started', { role: selectedRole, source: 'register' })
     setIsLoading(true)
     try {
       // Sign in with Google via Firebase
@@ -68,6 +71,9 @@ export default function RegisterPage() {
         response.user
       )
 
+      if (response.isNewUser) {
+        capture('signup_completed', { role: response.user.role, source: 'register' })
+      }
       toast.success('Account created successfully!')
 
       // Redirect to onboarding or dashboard
@@ -216,13 +222,23 @@ export default function RegisterPage() {
       {/* Terms */}
       <p className="mt-6 text-xs text-foreground-subtle text-center">
         By creating an account, you agree to our{' '}
-        <Link href="/terms" className="underline hover:text-foreground-muted">
+        <a
+          href={TERMS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-foreground-muted"
+        >
           Terms of Service
-        </Link>{' '}
+        </a>{' '}
         and{' '}
-        <Link href="/privacy" className="underline hover:text-foreground-muted">
+        <a
+          href={PRIVACY_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-foreground-muted"
+        >
           Privacy Policy
-        </Link>
+        </a>
       </p>
     </motion.div>
   )

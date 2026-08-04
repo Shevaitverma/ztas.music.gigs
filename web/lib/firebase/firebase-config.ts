@@ -51,10 +51,3 @@ export function getFirebaseWebConfig(): FirebaseWebConfig | null {
     appId,
   };
 }
-
-/**
- * Get Firebase project ID
- */
-export function getFirebaseProjectId(): string {
-  return FIREBASE_PROJECT_ID;
-}

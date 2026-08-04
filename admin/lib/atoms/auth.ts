@@ -7,7 +7,5 @@ import type { User } from '@/lib/types'
 // authenticated user object for in-app reads.
 export const userAtom = atom<User | null>(null)
 
-export const isAuthenticatedAtom = atom((get) => get(userAtom) !== null)
-export const isAdminAtom = atom((get) => get(userAtom)?.role === 'admin')
 export const userNameAtom = atom((get) => get(userAtom)?.name ?? '')
 export const adminRoleAtom = atom((get) => get(userAtom)?.adminRole ?? null)

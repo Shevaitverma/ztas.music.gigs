@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  server:
+    name: Server (typecheck / test / audit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      # Exact patch, not the floating "1.3". A Bun patch bump has already broken
+      # module loading here once (bson + node:v8). Keep in sync with
+      # server/Dockerfile; bump both together and let the smoke test vet it.
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run typecheck
+
+      - run: bun test
+
+      # Blocking. The firebase-admin transitives that used to make this
+      # unpassable (protobufjs, @grpc/grpc-js, websocket-driver, form-data, bson)
+      # are pinned in package.json "overrides", taking the tree from 42 vulns
+      # (4 critical / 19 high) to 1 moderate. Gate at high so a new critical or
+      # high fails the build; the residual moderate (uuid, via two transitive
+      # paths with no fix available) does not.
+      - name: Dependency audit
+        run: bun audit --audit-level=high
+
+  # The three Next apps were entirely uncovered until 2026-08-04, which is how
+  # `admin` sat broken (a build failure, not a type error) while CI stayed green.
+  # tsc alone is NOT enough: the admin breakage is a prerender error that only
+  # `next build` surfaces.
+  frontend:
+    name: ${{ matrix.app }} (typecheck / build)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [web, admin, landing]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: ${{ matrix.app }}/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec tsc --noEmit
+
+      # Placeholder NEXT_PUBLIC_* values: the build inlines them, and Firebase
+      # config is public by design. Real values come from the deploy pipeline.
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci
+          NEXT_PUBLIC_FIREBASE_API_KEY: ci
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "0"
+          NEXT_PUBLIC_FIREBASE_APP_ID: ci
+
+  docker:
+    name: Docker build (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [server, web, admin, landing]
+    steps:
+      - uses: actions/checkout@v4
+      # Every Dockerfile does `COPY /app/public ./public`. Deleting the last
+      # tracked file from public/ once made git drop the directory and broke all
+      # three frontend images — with nothing in CI to catch it. Hence: build them.
+      - run: docker build ./${{ matrix.app }}

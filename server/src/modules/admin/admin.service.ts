@@ -544,7 +544,7 @@ export class AdminService {
         { $group: { _id: '$category', count: { $sum: 1 } } },
       ]),
       BidModel.aggregate([
-        { $group: { _id: '$gig', count: { $sum: 1 } } },
+        { $group: { _id: '$gigId', count: { $sum: 1 } } },
         { $group: { _id: null, avgBids: { $avg: '$count' } } },
       ]),
       GigModel.aggregate([

@@ -55,22 +55,6 @@ export function errorResponse(
 }
 
 /**
- * Create a validation error response
- */
-export function validationErrorResponse(
-  errors: Array<{ field: string; message: string }>
-): ErrorResponse & { errors: typeof errors } {
-  return {
-    success: false,
-    error: 'Validation Error',
-    message: 'Request validation failed',
-    statusCode: 400,
-    timestamp: new Date().toISOString(),
-    errors,
-  };
-}
-
-/**
  * HTTP Status codes with messages
  */
 export const HTTP_STATUS = {

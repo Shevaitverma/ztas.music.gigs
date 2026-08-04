@@ -9,6 +9,7 @@ import { Button } from '@/components/ui'
 import { useAuth } from '@/lib/providers'
 import { authApi } from '@/lib/api'
 import { isRequiresRoleResponse, type ProviderProfile } from '@/lib/api/auth'
+import { capture } from '@/lib/analytics'
 import { getFirebaseStatus } from '@/lib/firebase/config'
 import { signInWithGoogle } from '@/lib/firebase/google-auth'
 import '@/lib/firebase/init' // Initialize Firebase on import
@@ -109,6 +110,9 @@ export default function LoginPage() {
 
       // Branch on the structured `requiresRole` payload — no string matching.
       if (isRequiresRoleResponse(response)) {
+        // Google succeeded but the account has no role yet — this is a signup,
+        // not a login. Role is picked on the next screen.
+        capture('signup_started', { role: null, source: 'login' })
         setPendingSignup({
           type: 'google',
           signupToken: response.signupToken,
@@ -129,6 +133,7 @@ export default function LoginPage() {
       const userRole = response.user.role?.toUpperCase()
       let redirectUrl: string
       if (response.isNewUser) {
+        capture('signup_completed', { role: response.user.role, source: 'login' })
         redirectUrl = `/onboarding?role=${userRole}`
       } else if (redirectTo) {
         redirectUrl = redirectTo
@@ -163,6 +168,7 @@ export default function LoginPage() {
         response.user
       )
 
+      capture('signup_completed', { role, source: 'login' })
       toast.success('Account created successfully!')
 
       // Redirect to onboarding

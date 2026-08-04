@@ -19,16 +19,18 @@ const orbitSlots = [
   { ring: 2, angleOffset: 260 },
 ];
 
+// Instrument icons, not photos: we have no roster to show yet, and stock
+// headshots of identifiable people read as real platform artists.
 const artistData = [
-  { image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face", label: "Singer" },
-  { image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face", label: "DJ" },
-  { image: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&h=100&fit=crop&crop=face", label: "Guitarist" },
-  { image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop&crop=face", label: "Pianist" },
-  { image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&h=100&fit=crop&crop=face", label: "Vocalist" },
-  { image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face", label: "Drummer" },
-  { image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face", label: "Bassist" },
-  { image: "https://images.unsplash.com/photo-1488161628813-04466f0ec8b4?w=100&h=100&fit=crop&crop=face", label: "Saxophonist" },
-  { image: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=100&h=100&fit=crop&crop=face", label: "Producer" },
+  { icon: "🎤", label: "Singer" },
+  { icon: "🎧", label: "DJ" },
+  { icon: "🎸", label: "Guitarist" },
+  { icon: "🎹", label: "Pianist" },
+  { icon: "🎙️", label: "Vocalist" },
+  { icon: "🥁", label: "Drummer" },
+  { icon: "🎻", label: "Bassist" },
+  { icon: "🎷", label: "Saxophonist" },
+  { icon: "🎛️", label: "Producer" },
 ];
 
 const venueData = [
@@ -239,7 +241,8 @@ export function HeroSection() {
 
             <p className="mt-5 max-w-md text-base leading-relaxed text-white/70">
               Share your event and budget, and let musicians, bands, and DJs send you
-              proposals. Compare quotes, chat, and book the act that fits — all in one place.
+              proposals. Compare quotes side by side and book the act that fits — all
+              in one place.
             </p>
 
             <div className="mt-8 flex items-center gap-4">
@@ -317,17 +320,13 @@ export function HeroSection() {
                     <div className="relative h-12 w-12">
                       {/* Artist center */}
                       <div
-                        className="absolute inset-0 overflow-hidden rounded-full border-2 border-purple-400/60 shadow-lg shadow-purple-500/30"
+                        className="absolute inset-0 flex items-center justify-center rounded-full border-2 border-purple-400/60 bg-gradient-to-br from-white/15 to-white/5 text-2xl shadow-lg shadow-purple-500/30"
                         style={{
                           opacity: artistCenterOpacity,
                           transform: `scale(${0.85 + artistCenterOpacity * 0.15})`,
                         }}
                       >
-                        <img
-                          src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=face"
-                          alt="Artist"
-                          className="h-full w-full object-cover"
-                        />
+                        🎸
                       </div>
                       {/* Venue center */}
                       <div
@@ -405,13 +404,13 @@ export function HeroSection() {
                       </div>
                       {/* Artist bubble - absolute positioned on top */}
                       <div
-                        className={`${sizes[slot.ring]} absolute inset-0 overflow-hidden rounded-full border-2 border-white/30 shadow-lg shadow-purple-500/25`}
+                        className={`${sizes[slot.ring]} absolute inset-0 flex items-center justify-center rounded-full border-2 border-purple-400/40 bg-gradient-to-br from-purple-500/25 to-pink-500/15 ${textSizes[slot.ring]} shadow-lg shadow-purple-500/25 backdrop-blur-sm`}
                         style={{
                           opacity: artistOpacity,
                           transform: `scale(${0.8 + artistOpacity * 0.2})`,
                         }}
                       >
-                        <img src={artist.image} alt={artist.label} className="h-full w-full object-cover" />
+                        {artist.icon}
                       </div>
                     </div>
                     {/* Label - crossfade too */}

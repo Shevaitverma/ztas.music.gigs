@@ -11,6 +11,18 @@
 #   postinstall scripts that expect node on PATH. Bun runs TypeScript directly,
 #   so no separate build/transpile step is required.
 
+# ⚠️  RUNTIME VERSION IS NOT PINNED ON THIS PATH.
+#   `nixPkgs = ["bun"]` resolves to whatever Bun the platform's nixpkgs snapshot
+#   carries, so this deploy path can change runtime version without a code
+#   change. That has already caused a boot-time crash once (bson + node:v8),
+#   and it is the one gap the Dockerfile pin does NOT cover.
+#
+#   To close it, pin the nixpkgs snapshot so every package version is fixed:
+#     [phases.setup]
+#     nixpkgsArchive = "<nixpkgs commit sha>"
+#   Pick the sha whose Bun matches server/Dockerfile (currently 1.3.14) and bump
+#   both together. Until then, prefer the Dockerfile path for production.
+
 [phases.setup]
 nixPkgs = ["bun", "nodejs_20"]
 

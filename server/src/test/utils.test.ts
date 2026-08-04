@@ -2,7 +2,7 @@
  * Utility Function Tests
  */
 import { describe, it, expect } from 'bun:test';
-import { paginate, createPaginatedResponse, parsePaginationQuery } from '../shared/utils/pagination.utils';
+import { paginate, createPaginatedResponse } from '../shared/utils/pagination.utils';
 import { successResponse, errorResponse, HTTP_STATUS } from '../shared/utils/response.utils';
 
 describe('Pagination Utils', () => {

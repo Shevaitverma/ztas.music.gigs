@@ -2,15 +2,13 @@
 
 import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import {
   User,
   MapPin,
   Music,
-  Star,
   Edit2,
   Instagram,
-  Youtube,
   Link as LinkIcon,
   Camera,
   Check,
@@ -53,7 +51,6 @@ const performanceTypes = [
 
 export default function ArtistProfilePage() {
   const { user, refetchUser } = useAuth()
-  const queryClient = useQueryClient()
   const [isEditing, setIsEditing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -200,10 +197,6 @@ export default function ArtistProfilePage() {
                 <span className="flex items-center gap-1">
                   <Music className="w-4 h-4" />
                   {profile?.yearsOfExperience || 0} years experience
-                </span>
-                <span className="flex items-center gap-1">
-                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                  4.9 (28 reviews)
                 </span>
               </div>
 

@@ -10,6 +10,3 @@ export const APP_URL =
 // Early access is open registration during the beta.
 export const SIGNUP_URL = `${APP_URL}/register`;
 export const LOGIN_URL = `${APP_URL}/login`;
-
-// In-page anchor for the early-access / "request access" block.
-export const EARLY_ACCESS_HREF = "#early-access";

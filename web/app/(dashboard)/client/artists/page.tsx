@@ -6,7 +6,6 @@ import { motion } from 'framer-motion'
 import {
   Search,
   MapPin,
-  Star,
   Music,
   Filter,
   X,
@@ -202,17 +201,13 @@ export default function FindArtistsPage() {
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                    <div className="flex items-center gap-1 text-amber-400">
-                      <Star className="w-4 h-4 fill-current" />
-                      <span className="text-sm font-medium">4.8</span>
-                    </div>
-                    {artist.artistProfile?.baseRate && (
+                  {artist.artistProfile?.baseRate ? (
+                    <div className="flex items-center justify-end pt-3 border-t border-white/5">
                       <span className="text-sm text-foreground-muted">
                         From {formatCurrency(artist.artistProfile.baseRate)}
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  ) : null}
                 </Card>
               </Link>
             ))}

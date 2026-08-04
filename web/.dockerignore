@@ -6,3 +6,11 @@ node_modules
 Dockerfile
 .dockerignore
 README.md
+
+# Secrets. The builder does `COPY . .`, so without these an .env.local is
+# copied into a cached build layer — and if that cache is ever pushed
+# (--cache-to type=registry), the secrets go with it.
+# NEXT_PUBLIC_* values must be supplied as build ARGs, not by copying .env files.
+.env
+.env.local
+.env.*.local

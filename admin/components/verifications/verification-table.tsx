@@ -15,10 +15,10 @@ function countDocuments(row: VerificationListItem): number {
   let n = 0
   if (row.identity?.documentUrl) n++
   if (row.identity?.selfieUrl) n++
-  if (row.kind === 'organizer') {
+  if (row.type === 'organizer') {
     if (row.business?.registrationDocUrl) n++
     if (row.venues) n += row.venues.filter((v) => v.proofDocUrl).length
-  } else if (row.kind === 'artist') {
+  } else if (row.type === 'artist') {
     if (row.bankAccount?.proofDocUrl) n++
   }
   return n
@@ -59,18 +59,14 @@ export function VerificationTable({ rows }: VerificationTableProps) {
               const submitted =
                 row.identity?.submittedAt ?? row.createdAt
               return (
-                <tr key={`${row.kind}-${row.id}`} className="hover:bg-zinc-900/40">
+                <tr key={`${row.type}-${row.id}`} className="hover:bg-zinc-900/40">
                   <td className="px-4 py-3">
                     <div className="flex flex-col">
-                      <span className="font-medium text-zinc-100">
-                        {row.user?.name ?? 'Unknown user'}
-                      </span>
-                      <span className="text-xs text-zinc-500">
-                        {row.user?.role ?? row.kind} · {row.user?.email ?? row.userId}
-                      </span>
+                      <span className="font-medium text-zinc-100">{row.userId}</span>
+                      <span className="text-xs text-zinc-500 capitalize">{row.type}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 capitalize text-zinc-300">{row.kind}</td>
+                  <td className="px-4 py-3 capitalize text-zinc-300">{row.type}</td>
                   <td className="px-4 py-3">
                     <VerificationStatusBadge status={row.overallStatus} />
                   </td>
@@ -79,7 +75,7 @@ export function VerificationTable({ rows }: VerificationTableProps) {
                     {countDocuments(row)}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link href={`/verifications/${row.kind}/${row.id}`}>
+                    <Link href={`/verifications/${row.type}/${row.id}`}>
                       <Button size="sm" variant="secondary">
                         Review
                       </Button>

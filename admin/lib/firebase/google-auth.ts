@@ -4,7 +4,7 @@ import {
   getIdToken,
   signInWithPopup,
 } from 'firebase/auth'
-import { getFirebaseAuth, getFirebaseStatus } from './config'
+import { getFirebaseAuth } from './config'
 
 export interface GoogleSignInResult {
   idToken: string
@@ -14,14 +14,6 @@ export interface GoogleSignInResult {
     displayName: string | null
     photoURL: string | null
   }
-}
-
-export function isGoogleAuthAvailable(): { available: boolean; error?: string } {
-  const status = getFirebaseStatus()
-  if (!status.isReady) {
-    return { available: false, error: status.error || 'Firebase is not initialized' }
-  }
-  return { available: true }
 }
 
 export async function signInWithGoogle(): Promise<GoogleSignInResult> {

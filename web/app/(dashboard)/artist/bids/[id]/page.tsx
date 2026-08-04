@@ -9,12 +9,11 @@ import {
   Clock,
   MapPin,
   DollarSign,
-  User,
   CheckCircle2,
   XCircle,
   AlertCircle,
   ExternalLink,
-  Pencil,
+  KeyRound,
 } from 'lucide-react'
 import { Card, Button, Badge, Avatar } from '@/components/ui'
 import { bidsApi, gigsApi } from '@/lib/api'
@@ -122,15 +121,6 @@ export default function BidDetailPage() {
         <Card variant="elevated" className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">Your Bid</h2>
-            {bid.status === 'PENDING' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                leftIcon={<Pencil className="w-4 h-4" />}
-              >
-                Edit Bid
-              </Button>
-            )}
           </div>
 
           <div className="flex items-baseline gap-2 mb-4">
@@ -158,8 +148,13 @@ export default function BidDetailPage() {
                 <span className="font-semibold">Congratulations! You got the gig!</span>
               </div>
               <p className="text-sm text-emerald-400/80 mt-1">
-                The client has accepted your bid. Contact them to discuss the details.
+                On the day, the organizer gives you a 6-digit code at the venue — enter it on
+                the check-in page to start the event. Payment is arranged directly between you
+                and the organizer.
               </p>
+              <Button variant="primary" className="mt-4" asChild leftIcon={<KeyRound className="w-4 h-4" />}>
+                <Link href={`/artist/gigs/${bid.gigId}/checkin`}>Go to Check-in</Link>
+              </Button>
             </div>
           )}
 
@@ -223,20 +218,23 @@ export default function BidDetailPage() {
           </Card>
         )}
 
-        {/* Client Info (if bid is accepted) */}
-        {bid.status === 'ACCEPTED' && gig?.client && (
+        {/* Organizer (if bid is accepted).
+            The gig endpoint returns `postedBy` with name + picture only — there
+            is no email/phone on the wire, so we don't pretend otherwise. */}
+        {bid.status === 'ACCEPTED' && gig?.postedBy && (
           <Card variant="elevated" className="p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Client Contact</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Organizer</h2>
             <div className="flex items-center gap-4">
-              <Avatar src={gig.client.profilePicture} name={gig.client.name} size="lg" />
+              <Avatar
+                src={gig.postedBy.profilePicture}
+                name={gig.postedBy.name || 'Organizer'}
+                size="lg"
+              />
               <div>
-                <p className="font-semibold text-foreground">{gig.client.name}</p>
-                {gig.client.email && (
-                  <p className="text-sm text-foreground-muted">{gig.client.email}</p>
-                )}
-                {gig.client.phone && (
-                  <p className="text-sm text-foreground-muted">{gig.client.phone}</p>
-                )}
+                <p className="font-semibold text-foreground">{gig.postedBy.name || 'Organizer'}</p>
+                <p className="text-sm text-foreground-muted">
+                  You&apos;ll meet them at the venue for check-in.
+                </p>
               </div>
             </div>
           </Card>

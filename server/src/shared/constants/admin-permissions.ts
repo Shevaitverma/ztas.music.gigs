@@ -58,16 +58,6 @@ export function hasPermission(role: AdminRole, permission: AdminPermission): boo
 }
 
 /**
- * Check if a role has all of the specified permissions
- * @param role - The admin role to check
- * @param permissions - The permissions to check for
- * @returns Whether the role has all the permissions
- */
-export function hasAllPermissions(role: AdminRole, permissions: AdminPermission[]): boolean {
-  return permissions.every((permission) => hasPermission(role, permission));
-}
-
-/**
  * Check if a role has any of the specified permissions
  * @param role - The admin role to check
  * @param permissions - The permissions to check for
@@ -75,26 +65,6 @@ export function hasAllPermissions(role: AdminRole, permissions: AdminPermission[
  */
 export function hasAnyPermission(role: AdminRole, permissions: AdminPermission[]): boolean {
   return permissions.some((permission) => hasPermission(role, permission));
-}
-
-/**
- * Get all permissions for a role
- * @param role - The admin role
- * @returns Array of permissions for the role
- */
-export function getPermissionsForRole(role: AdminRole): AdminPermission[] {
-  return ADMIN_ROLE_PERMISSIONS[role] ?? [];
-}
-
-/**
- * Get roles that have a specific permission
- * @param permission - The permission to check
- * @returns Array of roles that have the permission
- */
-export function getRolesWithPermission(permission: AdminPermission): AdminRole[] {
-  return (Object.keys(ADMIN_ROLE_PERMISSIONS) as AdminRole[]).filter((role) =>
-    hasPermission(role, permission)
-  );
 }
 
 /**

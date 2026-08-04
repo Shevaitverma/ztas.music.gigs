@@ -68,17 +68,3 @@ export function createPaginatedResponse<T>(
     },
   };
 }
-
-/**
- * Parse pagination params from query string
- * Handles string to number conversion safely
- */
-export function parsePaginationQuery(query: {
-  page?: string;
-  limit?: string;
-}): PaginationParams {
-  return {
-    page: query.page ? parseInt(query.page, 10) || PAGINATION.DEFAULT_PAGE : undefined,
-    limit: query.limit ? parseInt(query.limit, 10) || PAGINATION.DEFAULT_LIMIT : undefined,
-  };
-}

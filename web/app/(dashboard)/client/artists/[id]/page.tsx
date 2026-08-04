@@ -6,7 +6,6 @@ import { motion } from 'framer-motion'
 import {
   ArrowLeft,
   MapPin,
-  Star,
   Music,
   BadgeCheck,
   Instagram,
@@ -100,29 +99,21 @@ export default function ArtistProfilePage() {
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 text-amber-400">
-                    <Star className="w-5 h-5 fill-current" />
-                    <span className="text-lg font-semibold">4.8</span>
-                  </div>
                 </div>
 
                 {/* Quick Stats */}
-                <div className="grid grid-cols-3 gap-4 mt-4 p-4 rounded-xl bg-surface/50">
+                <div className="grid grid-cols-2 gap-4 mt-4 p-4 rounded-xl bg-surface/50">
                   <div className="text-center">
                     <p className="text-2xl font-bold text-foreground">
                       {profile?.yearsOfExperience || 0}
                     </p>
                     <p className="text-xs text-foreground-muted">Years Exp.</p>
                   </div>
-                  <div className="text-center border-x border-white/10">
+                  <div className="text-center border-l border-white/10">
                     <p className="text-2xl font-bold gradient-text">
                       {profile?.baseRate ? formatCurrency(profile.baseRate) : 'N/A'}
                     </p>
                     <p className="text-xs text-foreground-muted">Base Rate</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-foreground">12</p>
-                    <p className="text-xs text-foreground-muted">Gigs Done</p>
                   </div>
                 </div>
               </div>

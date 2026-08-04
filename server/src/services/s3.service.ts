@@ -1,7 +1,6 @@
 import {
   S3Client,
   PutObjectCommand,
-  DeleteObjectCommand,
   GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -64,48 +63,6 @@ export class S3Service {
       return url;
     } catch (error) {
       logger.error('Error uploading file to S3', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate a pre-signed URL for uploading
-   * (Alternative to server-side upload)
-   */
-  async getPresignedUploadUrl(key: string, contentType: string): Promise<string> {
-    try {
-      const command = new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        ContentType: contentType,
-      });
-
-      const url = await getSignedUrl(this.s3Client, command, {
-        expiresIn: config.aws.presignedUrlExpiry,
-      });
-
-      return url;
-    } catch (error) {
-      logger.error('Error generating presigned upload URL', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Delete a file from S3
-   * @param key File path/name in bucket
-   */
-  async deleteFile(key: string): Promise<void> {
-    try {
-      const command = new DeleteObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-      });
-
-      await this.s3Client.send(command);
-      logger.info(`File deleted: ${key}`);
-    } catch (error) {
-      logger.error('Error deleting file from S3', error);
       throw error;
     }
   }

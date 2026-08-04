@@ -1,10 +1,24 @@
+import * as Sentry from '@sentry/bun';
 import { createApp } from './app';
 import { connectDB, disconnectDB } from './db';
 import { config } from './config';
+import { scrubSentryEvent } from './plugins/error.plugin';
 import { firebaseAdminService } from './services/firebase-admin.service';
 import { schedulerService } from './services/scheduler.service';
 
 const PORT = config.app.port;
+
+// No DSN = Sentry disabled. `init` is never called, and every Sentry.* call
+// elsewhere (error.plugin, the handlers below) degrades to a no-op.
+if (config.sentryDsn) {
+	Sentry.init({
+		dsn: config.sentryDsn,
+		environment: config.app.nodeEnv,
+		sendDefaultPii: false,
+		beforeSend: scrubSentryEvent,
+	});
+	console.log('🛰️  Sentry enabled');
+}
 
 // Track if shutdown is in progress
 let isShuttingDown = false;
@@ -32,7 +46,7 @@ async function bootstrap() {
 		console.log('\n🌐 Starting HTTP server...');
 		const app = createApp();
 
-		const server = app.listen({ port: PORT, hostname: '0.0.0.0' }, () => {
+		app.listen({ port: PORT, hostname: '0.0.0.0' }, () => {
 			console.log('\n' + '═'.repeat(60));
 			console.log('✅ ZTS Music Platform API is running!');
 			console.log('═'.repeat(60));
@@ -107,7 +121,7 @@ async function bootstrap() {
 				stack: (error as Error)?.stack,
 				timestamp: new Date().toISOString(),
 			});
-			// TODO: forward to alerting (Sentry/PagerDuty) when wired up.
+			Sentry.captureException(error);
 		});
 
 		// Handle unhandled promise rejections — log only, never shutdown.
@@ -119,6 +133,7 @@ async function bootstrap() {
 				promise: String(promise),
 				timestamp: new Date().toISOString(),
 			});
+			Sentry.captureException(reason);
 		});
 	} catch (error: any) {
 		console.error('\n❌ Failed to start server:');

@@ -40,7 +40,7 @@ export const verificationsApi = {
       '/verification/admin/list',
       {
         params: {
-          status: params.status ?? 'pending',
+          status: params.status ?? 'PENDING',
           ...(params.type ? { type: params.type } : {}),
           page: params.page ?? 1,
           limit: params.limit ?? 20,

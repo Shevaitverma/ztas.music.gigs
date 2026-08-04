@@ -10,11 +10,6 @@ export const usersApi = {
     return apiClient.put<User>('/users/me', data)
   },
 
-  // Alias for updateMe with clearer naming
-  updateProfile: async (data: { name?: string; companyName?: string; city?: string }) => {
-    return apiClient.put<User>('/users/me', data)
-  },
-
   updateArtistProfile: async (data: UpdateArtistProfileInput) => {
     return apiClient.put<User>('/users/me/artist-profile', data)
   },

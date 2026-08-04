@@ -5,7 +5,6 @@ import { errorPlugin } from './plugins/error.plugin';
 import { loggingPlugin } from './plugins/logging.plugin';
 import { securityPlugin } from './plugins/security.plugin';
 import { compressionPlugin } from './plugins/compression.plugin';
-import { transformPlugin } from './plugins/transform.plugin';
 import { corsPlugin } from './plugins/cors.plugin';
 import { swaggerPlugin } from './plugins/swagger.plugin';
 import { config } from './config';

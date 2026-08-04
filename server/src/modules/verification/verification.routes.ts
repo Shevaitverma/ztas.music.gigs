@@ -18,11 +18,12 @@ import {
   type AdminRejectVerificationDto,
   type AdminUpdateProfessionalDto,
 } from './verification.schemas';
-import { UserRole, VerificationStatus } from '../../shared/enums';
+import { AdminPermission, UserRole, VerificationStatus } from '../../shared/enums';
 import { getAuthUser, type RouteContext } from '../../shared/types/auth.types';
 import { transformPlugin } from '../../plugins/transform.plugin';
 import { ForbiddenException } from '../../plugins/error.plugin';
 import { validateObjectId } from '../../shared/utils/validation.utils';
+import { requirePermission } from '../../shared/constants/admin-permissions';
 
 /**
  * Verification Routes
@@ -227,10 +228,7 @@ export const verificationRoutes = (verificationService: VerificationService) =>
     .get(
       '/admin/list',
       async (ctx) => {
-        const user = getAuthUser(ctx);
-        if (user.role !== UserRole.ADMIN) {
-          throw new ForbiddenException('Admin access required');
-        }
+        requirePermission(AdminPermission.VIEW_VERIFICATIONS)(ctx);
         const context = ctx as RouteContext;
         const query = context.query;
         return await verificationService.listVerifications({
@@ -263,10 +261,7 @@ export const verificationRoutes = (verificationService: VerificationService) =>
     .get(
       '/admin/:id/:type',
       async (ctx) => {
-        const user = getAuthUser(ctx);
-        if (user.role !== UserRole.ADMIN) {
-          throw new ForbiddenException('Admin access required');
-        }
+        requirePermission(AdminPermission.VIEW_VERIFICATIONS)(ctx);
         const context = ctx as RouteContext;
         const { id, type } = context.params;
         validateObjectId(id, 'verificationId');
@@ -296,10 +291,8 @@ export const verificationRoutes = (verificationService: VerificationService) =>
     .post(
       '/admin/approve',
       async (ctx) => {
+        requirePermission(AdminPermission.APPROVE_VERIFICATIONS)(ctx);
         const user = getAuthUser(ctx);
-        if (user.role !== UserRole.ADMIN) {
-          throw new ForbiddenException('Admin access required');
-        }
         const context = ctx as RouteContext;
         const body = context.body as AdminApproveVerificationDto;
         return await verificationService.approveVerification(user.userId, body);
@@ -322,10 +315,8 @@ export const verificationRoutes = (verificationService: VerificationService) =>
     .post(
       '/admin/reject',
       async (ctx) => {
+        requirePermission(AdminPermission.APPROVE_VERIFICATIONS)(ctx);
         const user = getAuthUser(ctx);
-        if (user.role !== UserRole.ADMIN) {
-          throw new ForbiddenException('Admin access required');
-        }
         const context = ctx as RouteContext;
         const body = context.body as AdminRejectVerificationDto;
         return await verificationService.rejectVerification(user.userId, body);
@@ -348,10 +339,8 @@ export const verificationRoutes = (verificationService: VerificationService) =>
     .post(
       '/admin/professional',
       async (ctx) => {
+        requirePermission(AdminPermission.APPROVE_VERIFICATIONS)(ctx);
         const user = getAuthUser(ctx);
-        if (user.role !== UserRole.ADMIN) {
-          throw new ForbiddenException('Admin access required');
-        }
         const context = ctx as RouteContext;
         const body = context.body as AdminUpdateProfessionalDto;
         return await verificationService.updateProfessional(user.userId, body);

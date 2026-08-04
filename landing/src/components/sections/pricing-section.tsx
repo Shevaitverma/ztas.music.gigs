@@ -11,15 +11,16 @@ interface PricingPlan {
   price: string;
   period: string;
   description: string;
-  features: string[];
+  features: (string | { text: string; badge: string })[];
   note?: string;
   isPopular?: boolean;
   buttonText: string;
   href: string;
 }
 
-// No subscriptions. The platform is free to join; we earn a commission only
-// when a booking completes. Escrow + OTP-based release roll out during the beta.
+// No subscriptions. The platform is free to join; the commission on completed
+// bookings is planned, not live. Escrow + OTP-based release roll out during the
+// beta. Keep this copy no more assertive than /terms.
 const plans: PricingPlan[] = [
   {
     name: "Free to Join",
@@ -28,9 +29,9 @@ const plans: PricingPlan[] = [
     description: "For every artist and organiser. No subscription, no upfront cost.",
     features: [
       "Post unlimited gigs",
-      "Browse and contact artists",
+      "Browse artist profiles and samples",
       "Send quotes and proposals",
-      "Direct messaging",
+      "Ratings and reviews after each gig",
     ],
     buttonText: "Get early access",
     href: SIGNUP_URL,
@@ -38,16 +39,16 @@ const plans: PricingPlan[] = [
   {
     name: "Pay When You Book",
     price: "~10–12%",
-    period: "per completed booking",
+    period: "planned commission",
     description:
-      "No monthly fees. We earn a small platform commission only when a booking actually completes.",
+      "No monthly fees. We plan to charge a small platform commission only when a booking actually completes.",
     features: [
       "No upfront or monthly cost",
       "Fee only on completed bookings",
-      "Payment held in escrow",
-      "Released after OTP check-in",
+      { text: "Payment held in escrow", badge: "Coming soon" },
+      { text: "Released after OTP check-in", badge: "Coming soon" },
     ],
-    note: "Escrow and OTP-based release roll out during the beta.",
+    note: "Escrow, OTP-based release, and the commission itself roll out during the beta. Rates are indicative and will be confirmed in-app before you book.",
     isPopular: true,
     buttonText: "Get early access",
     href: SIGNUP_URL,
@@ -174,16 +175,25 @@ function SpotlightCard({
 
         {/* Features */}
         <ul className="mt-6 space-y-3">
-          {plan.features.map((feature) => (
-            <li key={feature} className="flex items-start gap-2.5">
-              <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-purple-500/20">
-                <Check className="h-2.5 w-2.5 text-purple-400" />
-              </div>
-              <span className="text-sm text-white/70">
-                {feature}
-              </span>
-            </li>
-          ))}
+          {plan.features.map((feature) => {
+            const text = typeof feature === "string" ? feature : feature.text;
+            const badge = typeof feature === "string" ? undefined : feature.badge;
+            return (
+              <li key={text} className="flex items-start gap-2.5">
+                <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-purple-500/20">
+                  <Check className="h-2.5 w-2.5 text-purple-400" />
+                </div>
+                <span className="text-sm text-white/70">
+                  {text}
+                  {badge && (
+                    <span className="ml-2 whitespace-nowrap rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-medium text-amber-300">
+                      {badge}
+                    </span>
+                  )}
+                </span>
+              </li>
+            );
+          })}
         </ul>
 
         {/* Note */}
@@ -294,8 +304,9 @@ export function PricingSection() {
             Pricing
           </h2>
           <p className="mt-4 text-base text-white/60">
-            Free to join — no subscriptions. We only earn a small commission when
-            you complete a booking. You&rsquo;ll always see the fee upfront.
+            Free to join — no subscriptions. The plan is to earn a small commission
+            only when a booking completes. When payments go live, you&rsquo;ll see the
+            fee before you confirm anything.
           </p>
         </div>
 

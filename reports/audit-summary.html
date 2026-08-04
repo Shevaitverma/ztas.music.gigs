@@ -1,0 +1,404 @@
+<title>ZTS Music Gigs — Where the Project Stands</title>
+<style>
+  :root {
+    --ground:      #F7F4EE;
+    --ground-2:    #FFFFFF;
+    --ink:         #191B33;
+    --ink-soft:    #4A4C63;
+    --neutral:     #6E6F82;
+    --hairline:    #D9D4C8;
+    --accent:      #C4881A;
+    --accent-soft: #F0E2C4;
+    --critical:    #B03A30;
+    --warn:        #C4881A;
+    --ok:          #3F6B4E;
+    --ok-soft:     #E3EDE6;
+    --dead:        #9A96A6;
+
+    --display: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --body: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --measure: 68ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #131426; --ground-2: #1B1D33; --ink: #EDEAE0; --ink-soft: #B9B5C4;
+      --neutral: #8E8A9E; --hairline: #32344F; --accent: #E8A32B; --accent-soft: #3A2F18;
+      --critical: #E0645A; --warn: #E8A32B; --ok: #6FA982; --ok-soft: #1E2E24; --dead: #62607A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #131426; --ground-2: #1B1D33; --ink: #EDEAE0; --ink-soft: #B9B5C4;
+    --neutral: #8E8A9E; --hairline: #32344F; --accent: #E8A32B; --accent-soft: #3A2F18;
+    --critical: #E0645A; --warn: #E8A32B; --ok: #6FA982; --ok-soft: #1E2E24; --dead: #62607A;
+  }
+  :root[data-theme="light"] {
+    --ground: #F7F4EE; --ground-2: #FFFFFF; --ink: #191B33; --ink-soft: #4A4C63;
+    --neutral: #6E6F82; --hairline: #D9D4C8; --accent: #C4881A; --accent-soft: #F0E2C4;
+    --critical: #B03A30; --warn: #C4881A; --ok: #3F6B4E; --ok-soft: #E3EDE6; --dead: #9A96A6;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink); font-family: var(--body);
+    font-size: 17px; line-height: 1.65; margin: 0; padding: 0 1.25rem 6rem;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--measure); margin: 0 auto; }
+  .wide { max-width: 1040px; margin: 0 auto; }
+
+  header.masthead { border-bottom: 2px solid var(--ink); padding: 3.5rem 0 1.25rem; margin-bottom: 2rem; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--neutral); margin: 0 0 1rem;
+  }
+  h1 {
+    font-family: var(--display); font-weight: 600;
+    font-size: clamp(2rem, 5.5vw, 2.9rem); line-height: 1.08;
+    letter-spacing: -0.02em; text-wrap: balance; margin: 0 0 0.9rem;
+  }
+  .standfirst { font-size: 1.07rem; color: var(--ink-soft); margin: 0 0 1.5rem; text-wrap: pretty; }
+  .byline {
+    font-family: var(--mono); font-size: 0.72rem; color: var(--neutral);
+    display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem;
+    border-top: 1px solid var(--hairline); padding-top: 0.9rem;
+  }
+
+  h2 { font-family: var(--display); font-size: 1.55rem; letter-spacing: -0.01em; margin: 3.2rem 0 0.35rem; text-wrap: balance; }
+  h2 + .kicker {
+    font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 1.3rem;
+  }
+  p { margin: 0 0 1rem; text-wrap: pretty; }
+  strong { font-weight: 650; }
+  code { font-family: var(--mono); font-size: 0.83em; background: var(--accent-soft); padding: 0.1em 0.35em; }
+
+  /* scoreboard */
+  .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); margin: 0 0 2.5rem; }
+  .cell { background: var(--ground-2); padding: 0.95rem 1rem; }
+  .cell dt { font-family: var(--mono); font-size: 0.63rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--neutral); margin: 0 0 0.35rem; }
+  .cell dd { margin: 0; font-family: var(--display); font-size: 1.5rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .cell dd small { font-size: 0.72rem; font-family: var(--body); color: var(--neutral); display: block; margin-top: 0.15rem; }
+  .good { color: var(--ok); } .bad { color: var(--critical); } .mid { color: var(--warn); }
+
+  /* ledger */
+  .ledger { border-top: 1px solid var(--hairline); margin: 1.4rem 0; }
+  .row { display: grid; grid-template-columns: 5.4rem 1fr; gap: 0 1rem; padding: 0.85rem 0; border-bottom: 1px solid var(--hairline); align-items: baseline; }
+  .tag { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.09em; text-transform: uppercase; padding: 0.2em 0; }
+  .t-fixed { color: var(--ok); } .t-open { color: var(--critical); } .t-new { color: var(--warn); }
+  .row .what { font-size: 0.93rem; }
+  .row .what b { font-weight: 650; }
+  .row .what span { color: var(--ink-soft); display: block; font-size: 0.87rem; margin-top: 0.1rem; }
+
+  figure { margin: 2rem 0 2.5rem; }
+  .scroller { overflow-x: auto; }
+  svg { display: block; width: 100%; height: auto; min-width: 460px; }
+  figcaption { font-family: var(--mono); font-size: 0.71rem; color: var(--neutral); margin-top: 0.8rem; line-height: 1.5; text-wrap: pretty; }
+  .svg-label { font-family: system-ui, sans-serif; font-size: 12px; fill: var(--ink); }
+  .svg-sub { font-family: ui-monospace, monospace; font-size: 9.5px; fill: var(--neutral); }
+  .svg-head { font-family: ui-monospace, monospace; font-size: 9.5px; letter-spacing: 0.1em; fill: var(--neutral); }
+  .box-live { fill: var(--ground-2); stroke: var(--ok); stroke-width: 1.5; }
+  .box-dead { fill: none; stroke: var(--dead); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .box-crit { fill: var(--ground-2); stroke: var(--critical); stroke-width: 1.5; }
+  .box-fixed { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+  .flow { stroke: var(--ink-soft); stroke-width: 1.5; fill: none; }
+  .flow-dead { stroke: var(--dead); stroke-width: 1.5; fill: none; stroke-dasharray: 4 3; }
+
+  .bars { display: flex; flex-direction: column; gap: 0.3rem; margin: 1.4rem 0; }
+  .bar-row { display: grid; grid-template-columns: minmax(9rem, 15ch) 1fr 3.4rem; align-items: center; gap: 0.9rem; font-size: 0.83rem; }
+  .bar-name { color: var(--ink-soft); }
+  .bar-track { height: 12px; background: var(--hairline); position: relative; }
+  .bar-fill { height: 100%; }
+  .bar-val { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; font-size: 0.76rem; color: var(--neutral); }
+  .bar-val .up { color: var(--ok); }
+
+  .callout { border-left: 3px solid var(--accent); padding: 0.1rem 0 0.1rem 1.1rem; margin: 1.8rem 0; color: var(--ink-soft); font-size: 0.95rem; }
+  .callout strong { color: var(--ink); }
+  .callout.warn { border-left-color: var(--critical); }
+
+  .plan { border-top: 1px solid var(--hairline); margin-top: 1.4rem; }
+  .phase { display: grid; grid-template-columns: minmax(5.5rem, 8ch) 1fr; gap: 0 1.2rem; padding: 1.1rem 0; border-bottom: 1px solid var(--hairline); }
+  .phase-when { font-family: var(--mono); font-size: 0.71rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); padding-top: 0.2rem; }
+  .phase h4 { margin: 0 0 0.35rem; font-size: 0.97rem; font-weight: 650; }
+  .phase ul { margin: 0; padding-left: 1.1rem; font-size: 0.9rem; color: var(--ink-soft); }
+  .phase li { margin-bottom: 0.22rem; }
+
+  footer { border-top: 1px solid var(--hairline); margin-top: 4rem; padding-top: 1.2rem; font-family: var(--mono); font-size: 0.69rem; color: var(--neutral); line-height: 1.6; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">Status report · ZTS Music Gigs · 4 Aug 2026</p>
+    <h1>The plumbing got fixed. The product still stops at the handshake.</h1>
+    <p class="standfirst">
+      A full audit, then a repair pass, then a Go migration that was planned, stress-tested and
+      correctly abandoned. Security and correctness are meaningfully better than this morning.
+      The thing that actually blocks revenue has not moved — because it was never a code-quality problem.
+    </p>
+    <div class="byline">
+      <span>4 apps · ~37k LOC</span>
+      <span>audit + 15 agents</span>
+      <span>staying on TypeScript &amp; Bun</span>
+      <span>all four apps typecheck clean</span>
+    </div>
+  </header>
+
+  <dl class="board">
+    <div class="cell"><dt>Dependency vulns</dt><dd class="good">1<small>was 42 · 4 critical</small></dd></div>
+    <div class="cell"><dt>Tests</dt><dd class="good">35<small>was 21 · all passing</small></dd></div>
+    <div class="cell"><dt>Dead code cut</dt><dd class="good">1,162<small>lines · 22 files</small></dd></div>
+    <div class="cell"><dt>CI</dt><dd class="good">on<small>was none</small></dd></div>
+    <div class="cell"><dt>Revenue possible</dt><dd class="bad">₹0<small>unchanged</small></dd></div>
+    <div class="cell"><dt>Overall score</dt><dd class="mid">4.6<small>was 3.9 / 10</small></dd></div>
+  </dl>
+
+  <h2>What moved today</h2>
+  <p class="kicker">Fixed · newly found · still open</p>
+
+  <div class="ledger">
+    <div class="row"><span class="tag t-fixed">Fixed</span><span class="what"><b>42 dependency vulnerabilities → 1</b><span>Including an unauthenticated remote crash vector on the API front door, and a NoSQL-injection flaw in the database driver.</span></span></div>
+    <div class="row"><span class="tag t-fixed">Fixed</span><span class="what"><b>The admin KYC console, which had never worked</b><span>Two string mismatches meant the queue was always empty and every review link 404'd. Aadhaar and bank data was being collected with no human able to review it.</span></span></div>
+    <div class="row"><span class="tag t-fixed">Fixed</span><span class="what"><b>Cross-site request forgery</b><span>Confirmed exploitable: a form on any website could cancel a logged-in user's booked gig. Now blocked by an origin check.</span></span></div>
+    <div class="row"><span class="tag t-fixed">Fixed</span><span class="what"><b>Invented star ratings removed from the live app</b><span>Every artist displayed 4.8 or 4.9 — hardcoded numbers, since no review can currently be created. Clients were choosing on fiction.</span></span></div>
+    <div class="row"><span class="tag t-fixed">Fixed</span><span class="what"><b>Any admin tier could approve KYC and read ID scans</b><span>The permission system existed but was never enforced on those routes.</span></span></div>
+    <div class="row"><span class="tag t-fixed">Fixed</span><span class="what"><b>Client signup silently discarded what users typed</b><span>Company and city were sent in a shape the server ignores. Users saw “Profile setup complete!” and had an empty profile.</span></span></div>
+    <div class="row"><span class="tag t-fixed">Fixed</span><span class="what"><b>Continuous integration, plus honest marketing copy</b><span>Nothing checked the build before. Also removed messaging features the site advertised that don't exist.</span></span></div>
+
+    <div class="row"><span class="tag t-fixed">Fixed</span><span class="what"><b>1,162 lines of dead code removed, across all four apps</b><span>22 files deleted, including constants listing user roles that don't exist in this product, a debug plugin logging errors on every request that nothing imported, and a leftover “Hello via Bun!” stub. No test coverage lost.</span></span></div>
+    <div class="row"><span class="tag t-fixed">Fixed</span><span class="what"><b>Documentation that actively misled</b><span>The project's own notes described a payment system that was never built, an admin panel that didn't work, and the wrong encryption format — which misled this audit before the code was checked. All corrected against source.</span></span></div>
+    <div class="row"><span class="tag t-fixed">Fixed</span><span class="what"><b>Runtime version pinned, plus a boot smoke test</b><span>The runtime floated on a moving tag, so a crash like the one hit today could reach production with no code change. Now pinned, with six tests that catch it in CI.</span></span></div>
+
+    <div class="row"><span class="tag t-new">Found</span><span class="what"><b>Every bank IFSC code ever collected is destroyed</b><span>A database setting uppercased the encrypted value after encryption. Base64 is case-sensitive, so the data is unrecoverable — and it failed silently for months. Root cause fixed; the existing codes must be re-collected from users.</span></span></div>
+    <div class="row"><span class="tag t-new">Found</span><span class="what"><b>The rate limiter has never run — not once</b><span>A framework scoping rule meant it never executed for any real route. Login brute-force protection has been decorative. Deliberately not switched on yet: doing so blind would brown out the API.</span></span></div>
+
+    <div class="row"><span class="tag t-open">Open</span><span class="what"><b>No payment, escrow, commission or payout code exists</b><span>Still the single thing between this and revenue.</span></span></div>
+    <div class="row"><span class="tag t-open">Open</span><span class="what"><b>Nobody is ever notified of anything</b><span>No email, SMS, push or WhatsApp. “You've been outbid” is the entire auction loop and it never leaves the database.</span></span></div>
+    <div class="row"><span class="tag t-open">Open</span><span class="what"><b>Check-in and reviews have no user interface</b><span>The backend is built and tested. No user can reach it, so no gig can complete and no review can exist.</span></span></div>
+  </div>
+</div>
+
+<!-- FIG 1 — the journey, unchanged where it matters -->
+<div class="wide">
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 900 250" role="img" aria-label="User journey showing both client and artist paths still terminating at the booking step">
+        <text x="0" y="12" class="svg-head">CLIENT</text>
+        <rect x="0" y="24" width="112" height="42" class="box-live"/>
+        <text x="56" y="42" class="svg-label" text-anchor="middle">Post gig</text>
+        <text x="56" y="56" class="svg-sub" text-anchor="middle">works</text>
+        <path class="flow" d="M112 45 H 150"/><path class="flow" d="M142 40 l8 5 -8 5"/>
+        <rect x="150" y="24" width="112" height="42" class="box-live"/>
+        <text x="206" y="42" class="svg-label" text-anchor="middle">Compare bids</text>
+        <text x="206" y="56" class="svg-sub" text-anchor="middle">works</text>
+        <path class="flow" d="M262 45 H 300"/><path class="flow" d="M292 40 l8 5 -8 5"/>
+        <rect x="300" y="24" width="112" height="42" class="box-live"/>
+        <text x="356" y="42" class="svg-label" text-anchor="middle">Accept bid</text>
+        <text x="356" y="56" class="svg-sub" text-anchor="middle">works</text>
+        <path class="flow-dead" d="M412 45 H 452"/>
+        <rect x="452" y="24" width="150" height="42" class="box-crit"/>
+        <text x="527" y="41" class="svg-label" text-anchor="middle" style="fill:var(--critical)">DEAD END</text>
+        <text x="527" y="55" class="svg-sub" text-anchor="middle">“payment coming soon”</text>
+        <rect x="632" y="24" width="120" height="42" class="box-dead"/>
+        <text x="692" y="42" class="svg-label" text-anchor="middle" style="fill:var(--dead)">Check in</text>
+        <text x="692" y="56" class="svg-sub" text-anchor="middle">built, no UI</text>
+        <rect x="772" y="24" width="128" height="42" class="box-dead"/>
+        <text x="836" y="42" class="svg-label" text-anchor="middle" style="fill:var(--dead)">Review</text>
+        <text x="836" y="56" class="svg-sub" text-anchor="middle">built, no UI</text>
+
+        <text x="0" y="118" class="svg-head">ARTIST</text>
+        <rect x="0" y="130" width="112" height="42" class="box-live"/>
+        <text x="56" y="148" class="svg-label" text-anchor="middle">Browse gigs</text>
+        <text x="56" y="162" class="svg-sub" text-anchor="middle">works</text>
+        <path class="flow" d="M112 151 H 150"/><path class="flow" d="M142 146 l8 5 -8 5"/>
+        <rect x="150" y="130" width="112" height="42" class="box-live"/>
+        <text x="206" y="148" class="svg-label" text-anchor="middle">Undercut lowest</text>
+        <text x="206" y="162" class="svg-sub" text-anchor="middle">works</text>
+        <path class="flow" d="M262 151 H 300"/><path class="flow" d="M292 146 l8 5 -8 5"/>
+        <rect x="300" y="130" width="112" height="42" class="box-live"/>
+        <text x="356" y="148" class="svg-label" text-anchor="middle">Bid accepted</text>
+        <text x="356" y="162" class="svg-sub" text-anchor="middle">never told</text>
+        <path class="flow" d="M412 151 H 452"/><path class="flow" d="M444 146 l8 5 -8 5"/>
+        <rect x="452" y="130" width="150" height="42" class="box-crit"/>
+        <text x="527" y="147" class="svg-label" text-anchor="middle" style="fill:var(--critical)">No way to contact</text>
+        <text x="527" y="161" class="svg-sub" text-anchor="middle">no messaging exists</text>
+        <path class="flow" d="M602 151 H 640"/><path class="flow" d="M632 146 l8 5 -8 5"/>
+        <rect x="640" y="130" width="260" height="42" class="box-dead"/>
+        <text x="770" y="148" class="svg-label" text-anchor="middle" style="fill:var(--dead)">Closes the deal on WhatsApp</text>
+        <text x="770" y="162" class="svg-sub" text-anchor="middle">platform earns nothing</text>
+
+        <line x1="0" y1="205" x2="900" y2="205" stroke="var(--hairline)"/>
+        <text x="0" y="228" class="svg-sub">Solid = works · Dashed = code exists, unreachable · Red = where the product ends</text>
+      </svg>
+    </div>
+    <figcaption>
+      <strong>Figure 1 — now being fixed.</strong> The check-in and review screens under construction
+      turn the two dashed boxes solid. <em>Correction:</em> an earlier version of this page said the artist
+      is handed the client's phone number. That was wrong — the server fetches those fields but discards
+      them before responding, so they never reached the screen. The disintermediation risk is real, but it
+      comes from there being no messaging and no reason to return, not from the app leaking contacts.
+    </figcaption>
+  </figure>
+</div>
+
+<div class="wrap">
+  <h2>The Go migration</h2>
+  <p class="kicker">Planned, stress-tested, declined</p>
+  <p>
+    You asked for a full backend rewrite in Go. I planned it properly, then had four specialists
+    attack the plan. <strong>All four returned “not safe to execute as written”</strong> — and the
+    reasons were worth more than the plan itself.
+  </p>
+  <p>
+    The clearest example: the codebase has <strong>zero explicit database ID conversions</strong> in
+    18,000 lines — it relies entirely on a convenience the JavaScript library provides and Go does not.
+    Go wouldn't error on this. It would silently match nothing. The practical effect is that the
+    <strong>“must beat the current lowest bid” rule quietly disappears</strong>, and an artist wins the
+    auction at the maximum budget. Your core mechanic, defeated by a type conversion, invisible to
+    every test in the plan.
+  </p>
+  <p>
+    Ten more corrections of that kind are on record, and the honest timeline came back at
+    <strong>roughly double</strong> my first estimate — about 32 engineer-weeks, or 24–28 calendar weeks.
+  </p>
+  <div class="callout">
+    <strong>Decision: stay on TypeScript.</strong> The backend's language was never the problem.
+    Spending six months rewriting working code would have delayed the payment layer by six months
+    and reset the security work that just landed. Cleanup instead — which is where the repo is now.
+  </div>
+
+  <h2>What still has to be true to earn money</h2>
+  <p class="kicker">In dependency order</p>
+</div>
+
+<!-- FIG 2 — money chain -->
+<div class="wide">
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 900 150" role="img" aria-label="The chain from booking to revenue, with every step after booking not yet built">
+        <rect x="0" y="26" width="126" height="52" class="box-live"/>
+        <text x="63" y="48" class="svg-label" text-anchor="middle">Client books</text>
+        <text x="63" y="63" class="svg-sub" text-anchor="middle">₹25,000 gig · works</text>
+        <path class="flow-dead" d="M126 52 H 168"/>
+        <rect x="168" y="26" width="126" height="52" class="box-dead"/>
+        <text x="231" y="48" class="svg-label" text-anchor="middle" style="fill:var(--dead)">Deposit held</text>
+        <text x="231" y="63" class="svg-sub" text-anchor="middle">not built</text>
+        <path class="flow-dead" d="M294 52 H 336"/>
+        <rect x="336" y="26" width="126" height="52" class="box-dead"/>
+        <text x="399" y="48" class="svg-label" text-anchor="middle" style="fill:var(--dead)">OTP check-in</text>
+        <text x="399" y="63" class="svg-sub" text-anchor="middle">built, no UI</text>
+        <path class="flow-dead" d="M462 52 H 504"/>
+        <rect x="504" y="26" width="126" height="52" class="box-dead"/>
+        <text x="567" y="48" class="svg-label" text-anchor="middle" style="fill:var(--dead)">Release funds</text>
+        <text x="567" y="63" class="svg-sub" text-anchor="middle">not built</text>
+        <path class="flow-dead" d="M630 52 H 672"/>
+        <rect x="672" y="26" width="228" height="52" class="box-dead"/>
+        <text x="786" y="44" class="svg-label" text-anchor="middle" style="fill:var(--dead)">Keep ~12% commission</text>
+        <text x="786" y="58" class="svg-sub" text-anchor="middle">not built</text>
+        <text x="786" y="71" class="svg-sub" text-anchor="middle">→ ₹3,000 revenue per booking</text>
+        <text x="0" y="118" class="svg-sub">Only the first box exists. Everything right of it is why revenue is ₹0.</text>
+        <text x="0" y="136" class="svg-sub">The check-in step is built and tested — it just has no screen, so nobody can use it.</text>
+      </svg>
+    </div>
+    <figcaption>
+      <strong>Figure 2.</strong> Wiring the check-in screen is ~3 weeks and converts already-paid-for,
+      already-tested backend code into the one thing competitors don't have.
+    </figcaption>
+  </figure>
+</div>
+
+<div class="wrap">
+  <h2>Scorecard</h2>
+  <p class="kicker">Arrows show today's movement</p>
+  <div class="bars">
+    <div class="bar-row"><span class="bar-name">Market opportunity</span><span class="bar-track"><span class="bar-fill" style="width:70%;background:var(--ok)"></span></span><span class="bar-val">7</span></div>
+    <div class="bar-row"><span class="bar-name">Security</span><span class="bar-track"><span class="bar-fill" style="width:70%;background:var(--ok)"></span></span><span class="bar-val"><span class="up">▲</span> 7</span></div>
+    <div class="bar-row"><span class="bar-name">Engineering</span><span class="bar-track"><span class="bar-fill" style="width:70%;background:var(--ok)"></span></span><span class="bar-val"><span class="up">▲</span> 7</span></div>
+    <div class="bar-row"><span class="bar-name">Architecture</span><span class="bar-track"><span class="bar-fill" style="width:60%;background:var(--ok)"></span></span><span class="bar-val">6</span></div>
+    <div class="bar-row"><span class="bar-name">Problem strength</span><span class="bar-track"><span class="bar-fill" style="width:60%;background:var(--ok)"></span></span><span class="bar-val">6</span></div>
+    <div class="bar-row"><span class="bar-name">Business potential</span><span class="bar-track"><span class="bar-fill" style="width:50%;background:var(--warn)"></span></span><span class="bar-val">5</span></div>
+    <div class="bar-row"><span class="bar-name">Execution readiness</span><span class="bar-track"><span class="bar-fill" style="width:60%;background:var(--ok)"></span></span><span class="bar-val"><span class="up">▲</span> 6</span></div>
+    <div class="bar-row"><span class="bar-name">Product quality</span><span class="bar-track"><span class="bar-fill" style="width:40%;background:var(--warn)"></span></span><span class="bar-val"><span class="up">▲</span> 4</span></div>
+    <div class="bar-row"><span class="bar-name">User experience</span><span class="bar-track"><span class="bar-fill" style="width:40%;background:var(--warn)"></span></span><span class="bar-val"><span class="up">▲</span> 4</span></div>
+    <div class="bar-row"><span class="bar-name">Scalability</span><span class="bar-track"><span class="bar-fill" style="width:40%;background:var(--warn)"></span></span><span class="bar-val">4</span></div>
+    <div class="bar-row"><span class="bar-name">Growth potential</span><span class="bar-track"><span class="bar-fill" style="width:40%;background:var(--warn)"></span></span><span class="bar-val">4</span></div>
+    <div class="bar-row"><span class="bar-name">Competitive position</span><span class="bar-track"><span class="bar-fill" style="width:40%;background:var(--warn)"></span></span><span class="bar-val"><span class="up">▲</span> 4</span></div>
+    <div class="bar-row"><span class="bar-name">Investment readiness</span><span class="bar-track"><span class="bar-fill" style="width:30%;background:var(--critical)"></span></span><span class="bar-val">3</span></div>
+    <div class="bar-row"><span class="bar-name">Operations</span><span class="bar-track"><span class="bar-fill" style="width:30%;background:var(--critical)"></span></span><span class="bar-val"><span class="up">▲</span> 3</span></div>
+    <div class="bar-row"><span class="bar-name">Moat</span><span class="bar-track"><span class="bar-fill" style="width:30%;background:var(--critical)"></span></span><span class="bar-val"><span class="up">▲</span> 3</span></div>
+    <div class="bar-row"><span class="bar-name">Legal &amp; compliance</span><span class="bar-track"><span class="bar-fill" style="width:30%;background:var(--critical)"></span></span><span class="bar-val"><span class="up">▲</span> 3</span></div>
+    <div class="bar-row"><span class="bar-name">Revenue model</span><span class="bar-track"><span class="bar-fill" style="width:20%;background:var(--critical)"></span></span><span class="bar-val">2</span></div>
+  </div>
+
+  <div class="callout warn">
+    <strong>Revenue model is still 2/10, and that's the whole story.</strong> Ten categories improved
+    today. The one that decides whether this is a business did not move, because it can only move by
+    building the payment layer — not by fixing bugs.
+  </div>
+
+  <h2>What to do next</h2>
+  <p class="kicker">Unchanged by today's work</p>
+
+  <div class="plan">
+    <div class="phase">
+      <div class="phase-when">Now</div>
+      <div>
+        <h4>Find out if anyone wants this</h4>
+        <ul>
+          <li>Install analytics — you still cannot tell whether a single person used the app today</li>
+          <li>Recruit 25 artists and broker 5 bookings by hand, outside the product. No code, and it tests every assumption below</li>
+          <li>Re-collect the corrupted bank IFSC codes</li>
+        </ul>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-when">30 days</div>
+      <div>
+        <h4>Wire what you already own</h4>
+        <ul>
+          <li>Check-in and review screens — 3 weeks turns tested backend code into the actual moat</li>
+          <li>Start payment-gateway onboarding: entity, GST, bank. It's a 2–6 week external wait, so start it first</li>
+          <li>Turn the rate limiter on carefully — set trusted proxies, observe, tune, then enforce</li>
+        </ul>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-when">90 days</div>
+      <div>
+        <h4>Install the cash register</h4>
+        <ul>
+          <li>Artist subscription first — the only revenue that doesn't need escrow</li>
+          <li>Then escrow and commission, with tests written before money moves</li>
+          <li>WhatsApp and email notifications — the loop cannot close without them</li>
+        </ul>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-when">6 months</div>
+      <div>
+        <h4>Fix the pricing model</h4>
+        <ul>
+          <li>Replace the reverse auction with quote-comparison — a forced race to the bottom repels the artists who would make the marketplace credible</li>
+          <li>Target wedding planners and venues, not couples. They're the only buyers who come back, and the maths only works with repeat buyers</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>The pattern worth remembering.</strong> Three separate systems — check-in, reviews, and the
+    admin KYC console — were documented as finished and had never been run once. Each failed on a
+    ten-minute mistake: a missing method, a lowercase letter, a field named <code>kind</code> instead of
+    <code>type</code>. The engineering is genuinely capable. Nothing had been clicked through by a person.
+  </div>
+
+  <footer>
+    Full detail: <code>reports/07-full-audit-2026-08-04.md</code> (29 sections, every claim carries a file and line reference) ·
+    <code>reports/08-go-migration-plan.md</code> (the plan and why it was declined).<br>
+    Findings were put through adversarial review; corrections to my own errors are recorded in both documents rather than edited away.<br>
+    Biggest limitation, unchanged: there is still no usage data. One week of real analytics would outweigh every inference here.
+  </footer>
+</div>

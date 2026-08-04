@@ -1,4 +1,4 @@
-import { ApplicationModel, GigModel, BidModel, Application } from '../../db/models';
+import { ApplicationModel, GigModel, BidModel } from '../../db/models';
 import {
   NotFoundException,
   BadRequestException,
@@ -6,6 +6,7 @@ import {
   ConflictException,
 } from '../../plugins/error.plugin';
 import { ApplicationStatus, BidStatus, GigStatus } from '../../shared/enums';
+import { eventStartsAt } from '../../shared/utils/event-time';
 import type { CreateApplicationDto } from './applications.schemas';
 
 /**
@@ -69,7 +70,7 @@ export class ApplicationsService {
       throw new ForbiddenException('Cannot apply to your own gig');
     }
 
-    if (gig.eventTiming?.date && new Date(gig.eventTiming.date) < new Date()) {
+    if (gig.eventTiming?.date && eventStartsAt(gig.eventTiming) < new Date()) {
       throw new BadRequestException(
         'Cannot apply to a gig whose event date has passed'
       );

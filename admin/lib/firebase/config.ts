@@ -11,26 +11,6 @@ function getFirebaseOptions(): FirebaseOptions | null {
   return getFirebaseWebConfig()
 }
 
-export interface FirebaseStatus {
-  isReady: boolean
-  isInitialized: boolean
-  error: string | null
-}
-
-export function getFirebaseStatus(): FirebaseStatus {
-  if (typeof window === 'undefined') {
-    return { isReady: false, isInitialized: false, error: 'Server-side rendering' }
-  }
-  if (!isInitialized && !initializationError) {
-    getFirebaseApp()
-  }
-  return {
-    isReady: app !== null && auth !== null,
-    isInitialized,
-    error: initializationError,
-  }
-}
-
 export function getFirebaseApp(): FirebaseApp | null {
   if (typeof window === 'undefined') return null
 

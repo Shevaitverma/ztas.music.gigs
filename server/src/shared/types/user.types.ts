@@ -105,31 +105,3 @@ export interface UpdateProfileDto {
   clientProfile?: Partial<ClientProfileResponse>;
 }
 
-/**
- * Search Artists Query Parameters
- */
-export interface SearchArtistsQuery {
-  query?: string;
-  genre?: string;
-  performanceType?: string;
-  city?: string;
-  lat?: number;
-  lng?: number;
-  distance?: number;
-  page: number;
-  limit: number;
-}
-
-/**
- * Paginated Response
- */
-export interface PaginatedResponse<T> {
-  data: T[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
-}
-

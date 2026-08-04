@@ -12,6 +12,8 @@ export enum NotificationType {
   BID_REJECTED = 'BID_REJECTED',
   BID_OUTBID = 'BID_OUTBID',
   NEW_BID = 'NEW_BID',
+  GIG_BOOKED = 'GIG_BOOKED',
+  CHECKIN_OTP_READY = 'CHECKIN_OTP_READY',
 }
 
 /**

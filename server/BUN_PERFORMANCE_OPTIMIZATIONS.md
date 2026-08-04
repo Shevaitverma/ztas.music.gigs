@@ -1,8 +1,44 @@
 # Bun Performance Optimizations 🚀
 
+> ## ⚠️ Largely historical — read this header before believing anything below
+>
+> Audited 2026-08-04. This document was written as an aspirational summary and
+> has drifted badly from the code.
+>
+> **`src/shared/utils/performance.utils.ts` no longer exists.** It was deleted
+> as dead code — nothing in the codebase ever imported it. Every section below
+> that cites that file (§4 Native Crypto, §6 Fast Deep Cloning, and the whole
+> "🛠️ Performance Utilities" section, with `PerformanceTimer`, `batchProcess`,
+> `memoize`, `debounce`, `throttle`) describes **code that is gone**. Do not go
+> looking for those helpers and do not import them.
+>
+> **The benchmark numbers in this file were never measured against this
+> codebase.** There is no benchmark suite in `package.json` and no perf test in
+> `src/test/`. Treat every "Nx faster", every millisecond figure, and the entire
+> "Optimization Impact" / "Production Impact" sections as vendor-marketing
+> paraphrase, not results. Do not quote them to anyone.
+>
+> **What is actually true**, verified by grep over `server/src` — the codebase
+> uses exactly five Bun globals:
+>
+> | API | Uses | Where | Section below |
+> |---|---|---|---|
+> | `Bun.env` | 23 | `src/config/` | not documented below |
+> | `Bun.nanoseconds()` | 4 | `src/plugins/logging.plugin.ts` | §2 — accurate |
+> | `Bun.password` | 3 | `src/modules/auth/auth.service.ts` | §1 — accurate |
+> | `Bun.gzipSync()` | 1 | `src/plugins/compression.plugin.ts` | mentioned in README |
+> | `Bun.version` | 1 | health endpoint | — |
+>
+> Note `Bun.hash()` (§4) is **not used anywhere**. Sections 3, 5 and 7 describe
+> generic runtime behaviour rather than anything this codebase does
+> deliberately — `JSON.parse` being fast is a property of the runtime, not an
+> optimization anyone here implemented.
+>
+> Kept rather than deleted because §1 and §2 are correct and worth knowing.
+
 ## Overview
 
-This document outlines all Bun-specific optimizations implemented to maximize performance. These optimizations leverage Bun's native APIs which are significantly faster than Node.js equivalents.
+This document outlines Bun-specific optimizations. These leverage Bun's native APIs, which are faster than the Node.js equivalents.
 
 ---
 
@@ -91,7 +127,12 @@ async uploadFile(userId: string, file: File): Promise<string> {
 
 ---
 
-### 4. **Native Crypto Operations**
+### 4. **Native Crypto Operations** — ❌ REMOVED (file deleted)
+
+> The snippet below lived in `performance.utils.ts`, which has been deleted.
+> `Bun.hash()` is not called anywhere in the codebase. PII encryption uses
+> `node:crypto` AES-256-GCM (`src/shared/utils/crypto.ts`), and `crypto.randomUUID()`
+> is called directly in `security.plugin.ts`. Retained for history only.
 
 **Replaced:** Node.js `crypto` module  
 **With:** `Bun.hash()` and native `crypto` APIs  
@@ -135,7 +176,10 @@ const json = JSON.stringify(data);     // Faster serialization
 
 ---
 
-### 6. **Fast Deep Cloning**
+### 6. **Fast Deep Cloning** — ❌ REMOVED (file deleted)
+
+> Lived in `performance.utils.ts`, now deleted. `structuredClone` is still the
+> right call if you ever need a deep clone; there is simply no helper wrapping it.
 
 **Replaced:** `JSON.parse(JSON.stringify())`  
 **With:** `structuredClone()` (native)  
@@ -174,7 +218,14 @@ const str = decoder.decode(buffer);  // Fast decoding
 
 ---
 
-## 📊 Performance Benchmarks
+## 📊 Performance Benchmarks — ⚠️ NOT MEASURED
+
+> **None of the numbers below were produced by benchmarking this codebase.**
+> There is no benchmark script in `package.json` and no perf test in `src/test/`.
+> They are illustrative figures carried over from Bun's own marketing. The only
+> claim here that is structurally true regardless of measurement is the timing
+> *precision* one (`Bun.nanoseconds()` genuinely has sub-microsecond resolution
+> where `Date.now()` has millisecond). Treat the rest as unverified.
 
 ### Password Hashing
 ```
@@ -206,9 +257,16 @@ Bun.nanoseconds():    0.001ms (1μs) precision
 
 ---
 
-## 🛠️ Performance Utilities
+## 🛠️ Performance Utilities — ❌ DELETED, DO NOT IMPORT
 
-We've created a utility library with Bun-optimized helpers:
+> **This entire section describes `src/shared/utils/performance.utils.ts`, which
+> has been removed from the repo.** Nothing imported it, so it was dead code.
+> `PerformanceTimer`, `batchProcess`, `memoize`, `debounce` and `throttle` do not
+> exist. If you need any of them, write the three lines you actually need at the
+> call site rather than resurrecting the library. Kept below only so the deletion
+> is legible to anyone who finds a stale reference.
+
+We'd created a utility library with Bun-optimized helpers:
 
 ### Available Utilities
 
@@ -341,7 +399,6 @@ Bun:      200-300ms
 
 ✅ `Bun.password.hash()` instead of bcrypt  
 ✅ `Bun.nanoseconds()` for timing  
-✅ `Bun.hash()` for fast hashing  
 ✅ Native `File` API for uploads  
 ✅ `structuredClone()` for deep cloning  
 
@@ -349,9 +406,24 @@ Bun:      200-300ms
 
 ❌ bcrypt (use Bun.password)  
 ❌ Date.now() for precise timing (use Bun.nanoseconds)  
-❌ Node.js crypto (use native crypto/Bun.hash)  
 ❌ JSON.parse(JSON.stringify()) for cloning (use structuredClone)  
 ❌ Old file APIs (use Bun File API)  
+
+### ⚠️ Correction — the old "don't use Node.js crypto" line was wrong and has been removed
+
+An earlier revision of this file advised replacing Node's `crypto` with
+`Bun.hash()`. **Do not do that.** `Bun.hash()` is a fast *non-cryptographic*
+hash (wyhash family) intended for hash tables and cache keys — it offers no
+collision or preimage resistance and must never be used for anything
+security-bearing. This codebase deliberately uses `node:crypto` for all
+security paths and that is correct:
+
+- AES-256-GCM PII encryption — `src/shared/utils/crypto.ts`
+- SHA-256 refresh-token storage + `crypto.timingSafeEqual` comparison — `src/modules/auth/auth.service.ts`
+- `crypto.randomInt` for check-in OTPs, `crypto.randomUUID` for request IDs
+
+Leave them on `node:crypto`. Bun implements these natively anyway, so there is
+no measurable win to trade the security properties for.
 
 ---
 
@@ -359,27 +431,28 @@ Bun:      200-300ms
 
 ### Run Performance Tests
 
+> There is **no performance test suite** — no benchmark script in `package.json`,
+> nothing in `src/test/`. The `test_api_comparison.sh` this section used to
+> reference does not exist in the repo. Ad-hoc curl timing is all there is:
+
 ```bash
-# Test auth performance
+# Time a single request end-to-end
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"test123"}' \
   -w "\nTime: %{time_total}s\n"
-
-# Test API response times
-bash test_api_comparison.sh
 ```
 
 ### Monitor Performance
 
-```typescript
-// Add performance monitoring
-import { PerformanceTimer } from './shared/utils/performance.utils';
+Per-request duration is already logged by `src/plugins/logging.plugin.ts`, which
+uses `Bun.nanoseconds()` and emits the elapsed time on every request line (JSON
+in production, human-readable in dev). That is the monitoring hook — use it.
 
-const timer = new PerformanceTimer('API Request');
-await handleRequest();
-timer.end(); // Auto-logged with microsecond precision
-```
+> The `PerformanceTimer` import this section used to show
+> (`./shared/utils/performance.utils`) **will not resolve**; the module was
+> deleted. If you need to time a specific block, `Bun.nanoseconds()` inline is
+> two lines and needs no helper.
 
 ---
 

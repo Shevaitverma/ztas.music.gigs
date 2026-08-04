@@ -82,14 +82,3 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children
   }
 }
-
-// Hook-based error boundary wrapper for async errors
-export function AsyncBoundary({
-  children,
-  fallback,
-}: {
-  children: ReactNode
-  fallback?: ReactNode
-}) {
-  return <ErrorBoundary fallback={fallback}>{children}</ErrorBoundary>
-}

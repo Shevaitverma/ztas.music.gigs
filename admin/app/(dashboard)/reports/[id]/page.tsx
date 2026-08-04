@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
+import { capture } from '@/lib/analytics'
 import { reportsApi, reportsQueryKeys } from '@/lib/api/reports'
 import type { ResolveFormInput } from '@/lib/schemas/report'
 import { Button } from '@/components/ui/button'
@@ -58,6 +59,11 @@ export default function ReportDetailPage() {
       return reportsApi.resolve(id, input)
     },
     onSuccess: () => {
+      // Enums only — the moderator's notes never leave the audit log.
+      capture('admin_report_actioned', {
+        action: 'resolved',
+        entity_type: report?.reported.entityType,
+      })
       toast.success('Report resolved')
       setResolveOpen(false)
       qc.invalidateQueries({ queryKey: reportsQueryKeys.lists() })
@@ -84,6 +90,10 @@ export default function ReportDetailPage() {
       return reportsApi.dismiss(id, notes)
     },
     onSuccess: () => {
+      capture('admin_report_actioned', {
+        action: 'dismissed',
+        entity_type: report?.reported.entityType,
+      })
       toast.success('Report dismissed')
       setDismissOpen(false)
       setDismissNotes('')

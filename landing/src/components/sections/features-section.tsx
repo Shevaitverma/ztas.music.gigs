@@ -46,7 +46,7 @@ const features: Feature[] = [
     icon: <LayoutDashboard className="h-5 w-5" />,
     title: "One Place to Manage It",
     description:
-      "Track your gigs, proposals, and conversations from a single dashboard — chat to lock in the details.",
+      "Track your gigs, proposals, and bookings from a single dashboard — every detail in one view.",
   },
   {
     icon: <ShieldCheck className="h-5 w-5" />,

@@ -110,10 +110,7 @@ export function VerificationDetailCard({ data }: VerificationDetailCardProps) {
           <VerificationStatusBadge status={data.overallStatus} />
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Name" value={data.user?.name} />
-          <Field label="Email" value={data.user?.email} />
-          <Field label="Phone" value={data.user?.phone} />
-          <Field label="Role" value={data.user?.role ?? data.kind} />
+          <Field label="Role" value={data.type} />
           <Field label="User id" value={data.userId} />
           <Field label="Verification id" value={data.id} />
         </CardContent>
@@ -148,12 +145,12 @@ export function VerificationDetailCard({ data }: VerificationDetailCardProps) {
       )}
 
       {/* Organizer-specific */}
-      {data.kind === 'organizer' && (
+      {data.type === 'organizer' && (
         <OrganizerSections data={data} />
       )}
 
       {/* Artist-specific */}
-      {data.kind === 'artist' && <ArtistSections data={data} />}
+      {data.type === 'artist' && <ArtistSections data={data} />}
     </div>
   )
 }

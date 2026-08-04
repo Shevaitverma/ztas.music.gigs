@@ -28,14 +28,15 @@ export default function PrivacyPage() {
       <H2>1. Information we collect</H2>
       <p>
         Account details you provide (such as name, email, phone, and city),
-        content you create (gig listings, profiles, proposals, and messages), and
+        content you create (gig listings, profiles, proposals, and reviews), and
         basic technical information needed to operate and secure the platform.
       </p>
 
       <H2>2. How we use it</H2>
       <p>
-        To create your account, match organisers with artists, enable messaging
-        and bookings, provide support, and improve the product. We do not sell
+        To create your account, match organisers with artists, enable gig
+        proposals and bookings, provide support, and improve the product. We do
+        not sell
         your personal data.
       </p>
 

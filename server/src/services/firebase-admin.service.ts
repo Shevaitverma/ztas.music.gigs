@@ -74,18 +74,6 @@ export class FirebaseAdminService {
   }
 
   /**
-   * Get user by UID
-   */
-  async getUserByUid(uid: string): Promise<admin.auth.UserRecord> {
-    try {
-      return await this.getAuth().getUser(uid);
-    } catch (error) {
-      console.error(`[Firebase] Failed to get user by UID: ${uid}`, error);
-      throw error;
-    }
-  }
-
-  /**
    * Get user by email
    */
   async getUserByEmail(email: string): Promise<admin.auth.UserRecord> {

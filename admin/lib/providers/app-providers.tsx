@@ -3,13 +3,20 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { Provider as JotaiProvider } from 'jotai'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Toaster } from 'react-hot-toast'
+
+import { initAnalytics } from '@/lib/analytics'
 
 // Side-effect import: bootstraps Firebase on the client.
 import '@/lib/firebase/init'
 
 export function AppProviders({ children }: { children: ReactNode }) {
+  // No-op unless NEXT_PUBLIC_POSTHOG_KEY is set. Handles page views itself.
+  useEffect(() => {
+    initAnalytics()
+  }, [])
+
   const [queryClient] = useState(
     () =>
       new QueryClient({

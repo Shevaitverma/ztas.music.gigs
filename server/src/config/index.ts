@@ -6,6 +6,11 @@ export interface AppConfig {
   app: {
     nodeEnv: string;
     port: number;
+    /**
+     * IANA zone the platform's event wall-clock times are expressed in.
+     * India-only product, so this is 'Asia/Kolkata' unless overridden.
+     */
+    timezone: string;
   };
   database: {
     url: string;
@@ -34,6 +39,22 @@ export interface AppConfig {
   };
   logging: {
     level: string;
+  };
+  email: {
+    /** When false (default) nothing is sent — the message is logged instead. */
+    enabled: boolean;
+    apiKey: string;
+    from: string;
+  };
+  /** Empty string = Sentry disabled (init is skipped, capture calls are no-ops). */
+  sentryDsn: string;
+  rateLimit: {
+    /**
+     * `off`   — limiter does nothing.
+     * `log`   — counts and logs would-be violations, never returns 429 (default).
+     * `enforce` — returns 429 once a cap is exceeded.
+     */
+    mode: 'off' | 'log' | 'enforce';
   };
   features: {
     /** Enable activity logging (default: false for new platforms) */
@@ -102,6 +123,13 @@ export function loadConfig(): AppConfig {
     process.exit(1);
   }
 
+  const rateLimitModeRaw = Bun.env.RATE_LIMIT_MODE || 'log';
+  if (!['off', 'log', 'enforce'].includes(rateLimitModeRaw)) {
+    console.error(`Invalid RATE_LIMIT_MODE "${rateLimitModeRaw}". Use one of: off, log, enforce.`);
+    process.exit(1);
+  }
+  const rateLimitMode = rateLimitModeRaw as 'off' | 'log' | 'enforce';
+
   const trustedProxies = (Bun.env.TRUSTED_PROXIES || '127.0.0.1,::1')
     .split(',')
     .map((s) => s.trim())
@@ -111,6 +139,7 @@ export function loadConfig(): AppConfig {
     app: {
       nodeEnv,
       port: parseInt(Bun.env.PORT || '8080', 10),
+      timezone: Bun.env.APP_TIMEZONE || 'Asia/Kolkata',
     },
     database: {
       url: Bun.env.DATABASE_URL!,
@@ -140,10 +169,21 @@ export function loadConfig(): AppConfig {
     logging: {
       level: Bun.env.LOG_LEVEL || 'info',
     },
+    email: {
+      enabled: Bun.env.EMAIL_ENABLED === 'true',
+      apiKey: Bun.env.RESEND_API_KEY || '',
+      from: Bun.env.EMAIL_FROM || 'ZTS Music <onboarding@resend.dev>',
+    },
+    sentryDsn: Bun.env.SENTRY_DSN || '',
+    rateLimit: {
+      // Default `log`: the caps have never seen production traffic, so run in
+      // observe-only mode first and switch to `enforce` after reviewing logs.
+      mode: rateLimitMode,
+    },
     features: {
-      // Activity logging disabled by default for new platforms
-      // Set ENABLE_ACTIVITY_LOGGING=true to enable
-      activityLogging: Bun.env.ENABLE_ACTIVITY_LOGGING === 'true',
+      // Activity logging enabled by default — admin actions touch PII and
+      // must be auditable. Set ENABLE_ACTIVITY_LOGGING=false to opt out.
+      activityLogging: Bun.env.ENABLE_ACTIVITY_LOGGING !== 'false',
       authDebugLogging: Bun.env.AUTH_DEBUG_LOGGING === 'true',
     },
     encryptionKey,

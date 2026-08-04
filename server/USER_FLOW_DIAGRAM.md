@@ -1,8 +1,35 @@
 # ZTS Music Platform - User Flow Diagrams
 
+> ## ⚠️ This is the INTENDED flow. The built flow dead-ends at step 6.
+>
+> Audited 2026-08-04. Read this before using the diagrams below to reason about
+> behaviour — several steps document endpoints that do not exist.
+>
+> **Where the real user journey stops:** a venue can sign up, create and publish
+> a gig, receive bids, review artists, and accept a bid. The gig becomes
+> `BOOKED`. **And then nothing else is reachable from the product.** The client
+> gig detail page renders "Booked — event check-in & payment coming soon" where
+> steps 7–11 should be.
+>
+> Per-step status:
+>
+> | Steps | Status |
+> |---|---|
+> | 1–6 (signup → accept bid) | ✅ Built and working, server + web UI |
+> | 7 "Pay to Escrow" / 11 "Get Paid" | ❌ **Does not exist in any form.** No `Transaction` model, no payment gateway, no `/api/v1/transactions/*` routes — a grep for `transactions` across `server/src` returns one unrelated enum comment. The endpoints quoted in those steps are invented |
+> | 8–10 (event day, OTP check-in, end event) | ⚠️ **Server-only.** The endpoints are real and work (`src/modules/checkin/`). No UI calls them — `web/lib/api/checkin.ts` is a typed client with zero call sites, so no user can reach this |
+> | 11 "Leave Review" | ⚠️ **Server-only.** `POST /api/v1/reviews` is real and works. Web can *display* reviews but has **no review-submission UI** anywhere |
+>
+> Consequence worth stating plainly: the OTP check-in that this document (and
+> the business model) treats as the platform's core trust mechanism is
+> unreachable by users today. It is backend-complete and product-absent.
+>
+> Anything below describing escrow, payment release, or "platform cut" is a
+> **plan**, not a description of code. See `server/FUTURE.md` §2.
+
 ## Overview
 
-This document outlines the complete user journeys for the ZTS Music Platform, a **reverse-auction marketplace** connecting **Venues/Event Organizers** with **Artists** for live music gigs.
+This document outlines the complete *intended* user journeys for the ZTS Music Platform, a **reverse-auction marketplace** connecting **Venues/Event Organizers** with **Artists** for live music gigs.
 
 **Core Concept**: Venues post gigs with a maximum budget, and artists compete by bidding lower amounts. The venue selects the best combination of quality and price.
 
@@ -217,9 +244,11 @@ Result:
   - Transaction created → PENDING_PAYMENT
 ```
 
-#### Step 7: Pay to Escrow
+#### Step 7: Pay to Escrow — ❌ PLANNED, NOT IMPLEMENTED
+> This endpoint does not exist. There is no payments module, no `Transaction`
+> model and no gateway integration. Today the journey stops here.
 ```
-Method: POST /api/v1/transactions/:id/pay
+Method: POST /api/v1/transactions/:id/pay   ◄── DOES NOT EXIST
 Result:
   - Payment processed via gateway (Razorpay/Stripe)
   - Transaction status → ESCROW
@@ -233,7 +262,8 @@ Transaction is in ESCROW
 Venue prepares to host the event
 ```
 
-#### Step 9: Share OTP with Artist
+#### Step 9: Share OTP with Artist — ⚠️ SERVER ONLY, NO UI
+> The endpoints below are real and work. Nothing in the web app calls them.
 ```
 Method: POST /api/v1/checkin/generate-otp/:gigId
         GET /api/v1/checkin/otp/:gigId
@@ -247,12 +277,15 @@ Result: 6-digit OTP generated (e.g., "482917")
 Method: POST /api/v1/checkin/end-event/:gigId
 Auth: Required (Both parties must confirm)
 Result:
-  - Both venue and artist click "End Event"
+  - Both venue and artist confirm end-of-event (server API; no "End Event"
+    button exists in the UI yet)
   - Gig status → COMPLETED
-  - Payment → RELEASED to artist (minus platform cut)
+  - Payment → RELEASED to artist (minus platform cut)   ◄── PLANNED, no code
 ```
 
-#### Step 11: Leave Review for Artist
+#### Step 11: Leave Review for Artist — ⚠️ SERVER ONLY, NO UI
+> `POST /api/v1/reviews` is real and works. There is no review-submission form
+> in the web app; web only renders reviews already received.
 ```
 Method: POST /api/v1/reviews
 Body: {
@@ -418,7 +451,10 @@ Result:
   - Payment released from escrow
 ```
 
-#### Step 11: Get Paid
+#### Step 11: Get Paid — ❌ PLANNED, NOT IMPLEMENTED
+> No payouts exist. The bank-account and IFSC fields collected during artist
+> KYC are encrypted at rest and have no consumer. Artists are paid off-platform
+> today — `web/app/(dashboard)/artist/earnings/page.tsx` says as much.
 ```
 Automatic after both parties confirm event end
 Transaction status → RELEASED → COMPLETED
@@ -525,7 +561,12 @@ Example: ₹8,000 bid - 10% cut = ₹7,200 to artist
 
 ---
 
-## Payment & Escrow Flow
+## Payment & Escrow Flow — ❌ PLANNED, NOT IMPLEMENTED
+
+> **Nothing in this section exists in code.** No `Transaction` model, no
+> `TransactionStatus` enum server-side, no gateway, no routes. The diagram and
+> state table below are a design proposal — the same one in `server/FUTURE.md`
+> §2. Read them as "what we intend to build", never as "what the API does".
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -590,7 +631,14 @@ cut)    ┌────┴────┐
 
 ---
 
-## Event Check-in OTP Flow
+## Event Check-in OTP Flow — ⚠️ SERVER COMPLETE, NO CLIENT UI
+
+> The endpoints, `EventCheckIn` model, CSPRNG OTP generation and 5-strike /
+> 15-minute lockout are all real and tested. What is missing is any way for a
+> user to reach them: no OTP display for the venue, no OTP entry for the artist,
+> no "End Event" button. Ignore the `Transaction: ESCROW (paid)` precondition
+> shown below — there is no transaction, and check-in does not depend on one.
+
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -668,7 +716,12 @@ cut)    ┌────┴────┐
 
 ---
 
-## Review System Flow
+## Review System Flow — ⚠️ SERVER COMPLETE, READ-ONLY IN WEB
+
+> `src/modules/reviews/` implements create, list, stats, moderation and admin
+> endpoints. The web app can render reviews (`artist/reviews/page.tsx`) but has
+> no submission form, so no review can actually be written by a user today.
+
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐

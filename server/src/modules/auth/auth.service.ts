@@ -23,17 +23,6 @@ function hashRefreshToken(raw: string): string {
 }
 
 /**
- * True if `value` looks like a JWT (three base64url segments separated by '.').
- * Used to detect legacy raw-JWT refresh tokens stored before hashing was
- * introduced.
- */
-function looksLikeJwt(value: string): boolean {
-  const parts = value.split('.');
-  if (parts.length !== 3) return false;
-  return parts.every((p) => p.length > 0 && /^[A-Za-z0-9_-]+$/.test(p));
-}
-
-/**
  * Constant-time equality on two hex strings of equal length.
  */
 function timingSafeEqualHex(a: string, b: string): boolean {
@@ -56,36 +45,9 @@ const DUMMY_PASSWORD_HASH_PROMISE: Promise<string> = Bun.password.hash(
   { algorithm: 'argon2id', memoryCost: 19456, timeCost: 2 }
 );
 
-/**
- * Bun's native password hashing - 10x faster than bcrypt!
- * Uses Argon2 algorithm which is more secure and faster
- */
-const hashPassword = async (password: string): Promise<string> => {
-  return await Bun.password.hash(password, {
-    algorithm: 'argon2id',
-    memoryCost: 19456,
-    timeCost: 2,
-  });
-};
-
 const verifyPassword = async (password: string, hash: string): Promise<boolean> => {
   return await Bun.password.verify(password, hash, 'argon2id');
 };
-
-export interface TokenPair {
-  accessToken: string;
-  refreshToken: string;
-}
-
-export interface CreateUserData {
-  firebaseUid: string;
-  email?: string;
-  phoneNumber?: string;
-  name?: string;
-  profilePicture?: string;
-  role: UserRole;
-  authProvider: AuthProvider;
-}
 
 /**
  * Provider-derived profile fields surfaced to the frontend on a new-user
@@ -491,30 +453,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    // Refresh-token storage policy:
-    //  - New writes: SHA-256(rawToken) hex (64 chars).
-    //  - Legacy: raw JWT string (3 base64url segments). Accepted with a one-time
-    //    `===` match, then re-stored as a hash on the next rotation.
-    // TODO(refresh-token-legacy): remove the legacy raw-JWT branch after
-    // 2026-05-21 (cutover = today + 14 days). All clients should have rotated
-    // by then; any still-raw tokens after that are forced to re-login.
+    // Refresh tokens are stored as SHA-256(rawToken) hex (64 chars).
     let tokenIsValid = false;
     if (user.refreshToken) {
       const incomingHash = hashRefreshToken(refreshToken);
-      if (
+      tokenIsValid =
         user.refreshToken.length === incomingHash.length &&
-        timingSafeEqualHex(user.refreshToken, incomingHash)
-      ) {
-        tokenIsValid = true;
-      } else if (looksLikeJwt(user.refreshToken) && user.refreshToken === refreshToken) {
-        // Legacy pre-hash row: accept once, then upgrade storage to a hash.
-        tokenIsValid = true;
-        authLogger.info('Upgrading legacy raw refresh token to hashed storage', {
-          userId: user._id.toString(),
-        });
-        user.refreshToken = incomingHash;
-        await user.save();
-      }
+        timingSafeEqualHex(user.refreshToken, incomingHash);
     }
 
     if (!tokenIsValid) {
@@ -549,21 +494,10 @@ export class AuthService {
     const oldHash = hashRefreshToken(oldToken);
     const newHash = hashRefreshToken(newToken);
 
-    // Primary path: stored value is the hashed form.
-    let result = await UserModel.updateOne(
+    const result = await UserModel.updateOne(
       { _id: userId, refreshToken: oldHash },
       { $set: { refreshToken: newHash } }
     ).exec();
-
-    // TODO(refresh-token-legacy): remove this legacy fallback after
-    // 2026-05-21 (cutover = today + 14 days). It accepts a row that still
-    // holds the raw JWT and upgrades it to the hashed form.
-    if (result.modifiedCount !== 1) {
-      result = await UserModel.updateOne(
-        { _id: userId, refreshToken: oldToken },
-        { $set: { refreshToken: newHash } }
-      ).exec();
-    }
 
     return result.modifiedCount === 1;
   }

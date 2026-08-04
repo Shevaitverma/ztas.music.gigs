@@ -65,11 +65,10 @@ export function StatusBadge({
     ACCEPTED: { variant: 'success', label: 'Accepted' },
     REJECTED: { variant: 'error', label: 'Rejected' },
     WITHDRAWN: { variant: 'default', label: 'Withdrawn' },
-    PENDING_PAYMENT: { variant: 'warning', label: 'Awaiting Payment' },
-    ESCROW: { variant: 'info', label: 'In Escrow' },
-    RELEASED: { variant: 'success', label: 'Released' },
-    DISPUTED: { variant: 'error', label: 'Disputed' },
-    REFUNDED: { variant: 'default', label: 'Refunded' },
+    // No payment statuses here on purpose. There is no payments module: the
+    // server emits no PENDING_PAYMENT / ESCROW / RELEASED / DISPUTED /
+    // REFUNDED, and "In Escrow" was a promise the product does not keep.
+    // Payment is arranged directly between the parties (see PaymentNote).
   }
 
   const config = statusConfig[status] || { variant: 'default' as const, label: status }

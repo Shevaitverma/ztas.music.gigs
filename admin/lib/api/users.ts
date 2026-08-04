@@ -4,7 +4,6 @@ import type {
   AssignableUserStatus,
   UserDetail,
   UserListFilters,
-  UserListItem,
   UsersListResponse,
 } from '@/lib/types'
 

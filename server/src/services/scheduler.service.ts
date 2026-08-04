@@ -1,5 +1,24 @@
 import { GigModel, BidModel, NotificationModel, NotificationType, EventCheckInModel } from '../db/models';
 import { GigStatus, BidStatus, CheckInStatus } from '../shared/enums';
+import {
+  currentEventDay,
+  eventDayOffset,
+  eventEndsAt,
+  eventStartsAt,
+} from '../shared/utils/event-time';
+
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * `eventTiming.date` is stored as UTC midnight of the event's calendar day, so
+ * a Mongo range query on it can only ever select whole days — the real start
+ * instant needs `startTime` and the app timezone, which only JS can resolve.
+ * Every sweep below therefore queries a generous day window and narrows it
+ * in-process with the event-time helpers.
+ */
+function hasTiming(gig: any): boolean {
+  return Boolean(gig?.eventTiming?.date && gig?.eventTiming?.startTime);
+}
 
 /**
  * Scheduler Service
@@ -85,40 +104,39 @@ export class SchedulerService {
    * Send event reminders for upcoming events (24h and 2h before)
    */
   async sendEventReminders(): Promise<void> {
-    const now = new Date();
+    const now = Date.now();
 
-    // Find booked gigs with events in the next 24-26 hours (for 24h reminder)
-    const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    const in26Hours = new Date(now.getTime() + 26 * 60 * 60 * 1000);
+    // Reminder bands, measured from the event's actual start instant.
+    const in2Hours = now + 2 * HOUR_MS;
+    const in3Hours = now + 3 * HOUR_MS;
+    const in24Hours = now + 24 * HOUR_MS;
+    const in26Hours = now + 26 * HOUR_MS;
 
-    // Find booked gigs with events in the next 2-3 hours (for 2h reminder)
-    const in2Hours = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    const in3Hours = new Date(now.getTime() + 3 * 60 * 60 * 1000);
-
-    // 24h reminders
-    const gigs24h = await GigModel.find({
+    // Candidates: booked gigs on any calendar day that could contain a start
+    // instant in either band (today through +2 days), narrowed below.
+    const candidates = await GigModel.find({
       status: GigStatus.BOOKED,
-      'eventTiming.date': { $gte: in24Hours, $lt: in26Hours },
+      'eventTiming.date': { $gte: currentEventDay(), $lte: eventDayOffset(2) },
     })
       .populate('postedBy', 'name')
       .populate('acceptedArtist', 'name')
       .lean()
       .exec();
 
+    const timed = candidates
+      .filter(hasTiming)
+      .map((gig) => ({ gig, startsAt: eventStartsAt(gig.eventTiming).getTime() }));
+    const inBand = (from: number, to: number) =>
+      timed.filter((e) => e.startsAt >= from && e.startsAt < to).map((e) => e.gig);
+
+    // 24h reminders
+    const gigs24h = inBand(in24Hours, in26Hours);
     for (const gig of gigs24h) {
       await this.createReminderNotification(gig, NotificationType.EVENT_REMINDER_24H, '24 hours');
     }
 
     // 2h reminders
-    const gigs2h = await GigModel.find({
-      status: GigStatus.BOOKED,
-      'eventTiming.date': { $gte: in2Hours, $lt: in3Hours },
-    })
-      .populate('postedBy', 'name')
-      .populate('acceptedArtist', 'name')
-      .lean()
-      .exec();
-
+    const gigs2h = inBand(in2Hours, in3Hours);
     for (const gig of gigs2h) {
       await this.createReminderNotification(gig, NotificationType.EVENT_REMINDER_2H, '2 hours');
     }
@@ -182,21 +200,26 @@ export class SchedulerService {
   }
 
   /**
-   * Auto-close gigs with past event dates (LIVE → CLOSED)
+   * Auto-close gigs whose event has already started (LIVE → CLOSED)
    */
   async autoCloseExpiredGigs(): Promise<void> {
-    const now = new Date();
+    const now = Date.now();
 
     // Capture the exact set of gigs about to be closed BEFORE flipping status,
     // so the follow-up bid-rejection sweep does not match historical CLOSED
     // gigs (which would re-run BidModel.updateMany every tick).
-    const gigsToClose = await GigModel.find({
-      status: GigStatus.LIVE,
-      'eventTiming.date': { $lt: now },
-    })
-      .select('_id postedBy title')
-      .lean()
-      .exec();
+    // Day-level candidates (today and earlier), then narrowed to gigs whose
+    // start time has actually passed — a gig running tonight must stay LIVE
+    // this morning.
+    const gigsToClose = (
+      await GigModel.find({
+        status: GigStatus.LIVE,
+        'eventTiming.date': { $lte: currentEventDay() },
+      })
+        .select('_id postedBy title eventTiming')
+        .lean()
+        .exec()
+    ).filter((gig) => hasTiming(gig) && eventStartsAt(gig.eventTiming).getTime() < now);
 
     if (gigsToClose.length === 0) {
       return;
@@ -243,23 +266,31 @@ export class SchedulerService {
    * Auto-complete gigs 24 hours after the event (BOOKED/CLOSED → COMPLETED)
    */
   async autoCompleteGigs(): Promise<void> {
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    // Lower bound on the sweep window: after 30 days an unconfirmed gig ages out
-    // of the candidate set so we don't re-scan it (and re-query its check-in)
-    // on every tick forever. Anything older needs manual/admin resolution.
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const now = Date.now();
 
-    // Candidates: actually-booked gigs (have an accepted artist) whose event was
-    // 24h–30d ago. Requiring `acceptedArtist` excludes auto-closed *unbooked*
-    // expired gigs — they had no performer and must never be marked COMPLETED.
-    const gigsToComplete = await GigModel.find({
-      status: { $in: [GigStatus.BOOKED, GigStatus.CLOSED] },
-      acceptedArtist: { $exists: true, $ne: null },
-      'eventTiming.date': { $lt: twentyFourHoursAgo, $gte: thirtyDaysAgo },
-    })
-      .select('_id postedBy acceptedArtist title status')
-      .lean()
-      .exec();
+    // Candidates: actually-booked gigs (have an accepted artist) whose event day
+    // was within the last 31 days. Requiring `acceptedArtist` excludes
+    // auto-closed *unbooked* expired gigs — they had no performer and must never
+    // be marked COMPLETED. After 30 days an unconfirmed gig ages out of the
+    // candidate set so we don't re-scan it (and re-query its check-in) on every
+    // tick forever. Anything older needs manual/admin resolution.
+    const gigsToComplete = (
+      await GigModel.find({
+        status: { $in: [GigStatus.BOOKED, GigStatus.CLOSED] },
+        acceptedArtist: { $exists: true, $ne: null },
+        'eventTiming.date': { $gte: eventDayOffset(-31), $lte: currentEventDay() },
+      })
+        .select('_id postedBy acceptedArtist title status eventTiming')
+        .lean()
+        .exec()
+      // Narrow to events that genuinely ENDED more than 24h ago (wall-clock end
+      // time, overnight events included) — not merely dated in the past.
+    ).filter(
+      (gig) =>
+        hasTiming(gig) &&
+        gig.eventTiming.endTime &&
+        now - eventEndsAt(gig.eventTiming).getTime() >= 24 * HOUR_MS
+    );
 
     let completed = 0;
     let flaggedForReview = 0;

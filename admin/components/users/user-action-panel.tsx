@@ -5,6 +5,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { Ban, CheckCircle2, PauseCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { capture } from '@/lib/analytics'
 import { usersApi, usersQueryKeys } from '@/lib/api/users'
 import { usePermission } from '@/lib/permissions'
 import type { AssignableUserStatus, UserDetail } from '@/lib/types'
@@ -57,7 +58,13 @@ export function UserActionPanel({ user }: UserActionPanelProps) {
   const mutation = useMutation({
     mutationFn: (input: { status: AssignableUserStatus; reason?: string }) =>
       usersApi.updateStatus(user.id, input.status, input.reason),
-    onSuccess: () => {
+    onSuccess: (_data, input) => {
+      // Status enum + target role only. The operator's free-text reason stays
+      // in the server-side audit log where it belongs.
+      capture('admin_user_status_changed', {
+        status: input.status,
+        target_role: user.role,
+      })
       toast.success('User status updated')
       qc.invalidateQueries({ queryKey: usersQueryKeys.all })
       qc.invalidateQueries({ queryKey: usersQueryKeys.detail(user.id) })

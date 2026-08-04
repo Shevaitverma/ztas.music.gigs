@@ -15,11 +15,3 @@ export const UpdateUserStatusSchema = t.Object({
 export const VerifyUserSchema = t.Object({
   isVerified: t.Boolean(),
 });
-
-/**
- * Date Range Schema
- */
-export const DateRangeSchema = t.Object({
-  from: t.Optional(t.String()),
-  to: t.Optional(t.String()),
-});

@@ -97,10 +97,4 @@ export const CompleteSignupSchema = t.Object({
   ),
 });
 
-export type CompleteSignupDto = typeof CompleteSignupSchema.static;
-
-// Type exports for TypeScript
-export type SignupRole = typeof SignupRoleSchema.static;
-export type GoogleAuthDto = typeof GoogleAuthSchema.static;
 export type LoginDto = typeof LoginSchema.static;
-export type RefreshTokenDto = typeof RefreshTokenSchema.static;

@@ -1,10 +1,11 @@
 'use client'
 
-import { createContext, useContext, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useCallback, useEffect, type ReactNode } from 'react'
 import { useAtom } from 'jotai'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { userAtom } from '@/lib/atoms'
 import { authApi } from '@/lib/api'
+import { identify, initAnalytics, reset as resetAnalytics } from '@/lib/analytics'
 import type { User, AuthTokens } from '@/lib/types'
 
 interface AuthContextType {
@@ -25,6 +26,18 @@ const AuthContext = createContext<AuthContextType | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useAtom(userAtom)
   const queryClient = useQueryClient()
+
+  // Analytics: boot once, then keep the identity in sync with the session.
+  // No-op unless NEXT_PUBLIC_POSTHOG_KEY is set.
+  useEffect(() => {
+    initAnalytics()
+  }, [])
+
+  const userId = user?.id
+  const userRole = user?.role
+  useEffect(() => {
+    if (userId && userRole) identify(userId, userRole)
+  }, [userId, userRole])
 
   // Bootstrap: always attempt to fetch /auth/me on mount. Cookies (if any)
   // travel automatically. If 401, the user is simply logged out — no redirect
@@ -83,6 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setUser(null)
     queryClient.clear()
+    // Drop the analytics identity too, or a shared device cross-attributes
+    // the next person's events to this account.
+    resetAnalytics()
 
     // Navigate to /login. Use a hard nav so any stale in-memory state in
     // sibling components (react-query, hooks holding refs) is cleared too.

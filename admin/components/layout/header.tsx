@@ -7,6 +7,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 
 import { Button } from '@/components/ui/button'
+import { reset as resetAnalytics } from '@/lib/analytics'
 import { authApi } from '@/lib/api/auth'
 import { adminRoleAtom, userAtom, userNameAtom } from '@/lib/atoms/auth'
 
@@ -25,6 +26,8 @@ export function Header() {
       /* server best-effort; cookies may already be invalid */
     }
     setUser(null)
+    // Shared workstation: don't attribute the next admin's actions to this one.
+    resetAnalytics()
     toast.success('Signed out')
     router.replace('/login')
     router.refresh()

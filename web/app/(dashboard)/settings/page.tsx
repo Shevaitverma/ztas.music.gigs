@@ -1,6 +1,5 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import {
   LogOut,
   HelpCircle,
@@ -11,6 +10,7 @@ import {
 } from 'lucide-react'
 import { Card, Button, Avatar, Badge } from '@/components/ui'
 import { useAuth } from '@/lib/providers'
+import { TERMS_URL } from '@/lib/links'
 
 export default function SettingsPage() {
   const { user, logout } = useAuth()
@@ -32,7 +32,7 @@ export default function SettingsPage() {
       icon: FileText,
       label: 'Terms & Privacy Policy',
       description: 'Read our terms of service',
-      href: '/terms',
+      href: TERMS_URL,
       external: true,
     },
     {

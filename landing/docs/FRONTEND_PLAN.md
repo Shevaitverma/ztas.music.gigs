@@ -1,34 +1,54 @@
 # ZTS Music Platform - Frontend Implementation Plan
 
+> ## ⚠️ STALE PLANNING DOC — the "Current State" tables below were wrong as of 2026-08-04 and have been corrected in place.
+>
+> The build-order, sprint plan and per-feature specs further down are a proposal
+> and were only partly executed. Read them as intent. The corrected state tables
+> follow. Note this file lives in `landing/docs/` while planning the web and
+> admin apps — an artifact of an older repo layout.
+
 > What to build in the web and admin apps
 
 ---
 
 ## Current State
 
-### Web App (ai.zts.music.web)
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Authentication | ✅ Complete | Phone OTP, Google |
-| Home page | ✅ Complete | Hero, gig preview |
-| Gig browsing | ✅ Complete | List, basic search |
-| Gig details | ✅ Complete | View, apply |
-| Gig creation | ✅ Complete | 3-step wizard |
-| Apply to gig | ✅ Complete | Bid dialog |
-| Profile page | ⚠️ Basic | View only, no edit |
-| Messages | ❌ Stub | Empty placeholder |
-| Settings | ❌ Missing | |
+*Corrected against code 2026-08-04. The previous version of these tables is
+noted inline where it was wrong.*
 
-### Admin App (ai.zts.music.admin)
+### Web App (`web/`)
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Authentication | ✅ Complete | Email/password |
-| Dashboard | ⚠️ Basic | 4 metrics |
-| User list | ✅ Complete | Paginated table |
-| Gig list | ✅ Complete | Paginated table |
-| Settings | ❌ Stub | Placeholder |
-| User actions | ❌ Missing | Verify, ban |
-| Gig actions | ❌ Missing | Moderate |
+| Authentication | ✅ Complete | Firebase phone OTP + Google → httpOnly cookies |
+| Home page | ✅ Complete | Hero, gig preview |
+| Gig browsing | ✅ Complete | List, search, geospatial discover |
+| Gig details | ✅ Complete | View, bid |
+| Gig creation | ✅ Complete | Multi-step wizard |
+| Apply to gig | ✅ Complete | Bid dialog |
+| Profile page | ✅ Complete | Separate client and artist profile pages, editable *(was listed "⚠️ Basic, view only")* |
+| Settings | ✅ Exists | `/settings` *(was listed "❌ Missing")* |
+| Messages | ❌ Does not exist | *(was listed "❌ Stub, empty placeholder" — there is no messages route at all, not even a stub)* |
+| Artist earnings | ⚠️ Informational only | Explains that clients pay artists directly; no payment functionality exists to show |
+| Reviews | ⚠️ Read-only | Renders reviews received. **No review-submission UI anywhere**, though the server API supports it |
+| Event check-in (OTP) | ❌ No UI | `web/lib/api/checkin.ts` is a fully typed client with **zero call sites**. Server endpoints work; nothing calls them |
+
+**The gap that matters most and was not in the original table:** the user
+journey **dead-ends once a bid is accepted**. The client gig detail page renders
+"Booked — event check-in & payment coming soon" where steps 7–11 of
+`server/USER_FLOW_DIAGRAM.md` should be.
+
+### Admin App (`admin/`)
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Authentication | ✅ Complete | Firebase phone/Google + `role === 'admin'` assertion in `proxy.ts`. **Not email/password** *(the old table said email/password — wrong)* |
+| Dashboard | ⚠️ Basic | Single landing page |
+| User list + detail | ✅ Complete | Filters, pagination, `/users/[id]` with Profile/Activity/Actions tabs |
+| User actions | ✅ Complete | Suspend / ban / reactivate / manual verify *(was listed "❌ Missing")* |
+| Reports queue + detail | ✅ Complete | Not in the original table at all |
+| KYC verifications | ✅ Complete | Not in the original table. **Was non-functional until fixed 2026-08-04** — see `admin/README.md` for the wire contract |
+| Gig list / gig actions | ❌ Does not exist | *(the old table claimed a paginated gig list was "✅ Complete" — there is no gigs route in the admin app)* |
+| Settings | ❌ Does not exist | *(was listed as a stub; there is no settings route)* |
+| Analytics | ❌ No UI | Server endpoints (`/admin/analytics/*`, `/admin/storage/stats`) exist and are unconsumed |
 
 ---
 

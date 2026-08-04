@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { useQueryState, parseAsString } from 'nuqs'
@@ -14,7 +13,7 @@ import {
   MapPin,
 } from 'lucide-react'
 import Link from 'next/link'
-import { Card, Button, Badge, StatusBadge, BidCardSkeleton, EmptyState } from '@/components/ui'
+import { Card, Button, StatusBadge, BidCardSkeleton, EmptyState } from '@/components/ui'
 import { bidsApi } from '@/lib/api'
 import { formatCurrency, formatEventDate, formatRelativeTime, cn } from '@/lib/utils'
 import type { BidStatus } from '@/lib/types'

@@ -1,5 +1,31 @@
 # ZTS Music Platform - Infrastructure Decisions
 
+> ## ⚠️ STALE PLANNING DOC — these are *proposals*, and most were never acted on.
+>
+> Audited 2026-08-04. The title reads like a record of decisions taken. It is
+> not: it is an options-comparison written before the work, and the platform
+> today has adopted almost none of it.
+>
+> | § | Proposed | Actually in the codebase |
+> |---|---|---|
+> | 1 | Payment gateway (Razorpay recommended) | ❌ **No gateway. No payments code at all.** Nothing was integrated |
+> | 2 | File storage | ✅ AWS S3 with presigned URLs — `server/src/services/s3.service.ts` |
+> | 3 | Email service | ❌ Not integrated. No SMTP/SendGrid dependency exists |
+> | 4 | Caching (Redis) | ❌ **No Redis.** Rate-limit state is an in-process `Map`, which also means it does not survive a restart or work across instances |
+> | 5 | Job queue | ❌ No queue. Background work is a single in-process interval — `services/scheduler.service.ts` |
+> | 6 | Real-time communication | ✅ Native Elysia/Bun WebSockets, gateways for bids and admin |
+> | 7 | Push notifications | ❌ Not integrated. No FCM/APNs anywhere |
+> | 8 | SMS service | ❌ Not integrated. Phone auth goes through Firebase; there is no Twilio |
+> | 9 | Monitoring / error tracking | ❌ Not integrated. Structured JSON logging only |
+> | 10 | Deployment | Dockerfile + K8s probes exist; no committed deploy manifests |
+>
+> Also note this file lives in `landing/docs/` while describing backend
+> infrastructure — an artifact of an older repo layout, not a statement about
+> the marketing site.
+>
+> Useful as a starting point if you are about to pick a payment gateway or a
+> queue. Useless as a description of what is running.
+
 > Key technology choices and trade-offs
 
 ---

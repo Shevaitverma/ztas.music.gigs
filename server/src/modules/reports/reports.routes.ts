@@ -9,7 +9,6 @@ import {
 import { UserRole, AdminPermission } from '../../shared/enums';
 import { getAuthUser, type RouteContext } from '../../shared/types/auth.types';
 import { transformPlugin } from '../../plugins/transform.plugin';
-import { ForbiddenException } from '../../plugins/error.plugin';
 import { validateObjectId } from '../../shared/utils/validation.utils';
 import {
   requirePermission,

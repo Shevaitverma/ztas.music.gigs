@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { Bid, BidFilters, CreateBidInput, UpdateBidInput, BidStatus, PaginatedData } from '@/lib/types'
+import type { Bid, BidFilters, CreateBidInput, UpdateBidInput } from '@/lib/types'
 
 // Helper to build query string from filters
 function buildQueryString(filters?: BidFilters): string {

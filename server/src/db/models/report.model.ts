@@ -38,8 +38,6 @@ export interface Report extends Document {
   };
   /** Internal notes for admin team */
   adminNotes?: string;
-  /** Related reports (for tracking patterns) */
-  relatedReports?: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,7 +55,6 @@ const ReportedEntitySchema = new Schema(
     entityId: {
       type: Schema.Types.ObjectId,
       required: true,
-      refPath: 'reported.entityType',
     },
   },
   { _id: false }
@@ -157,11 +154,6 @@ const ReportSchema = new Schema<Report>(
       type: String,
       trim: true,
       maxlength: 2000,
-    },
-    relatedReports: {
-      type: [Schema.Types.ObjectId],
-      ref: 'Report',
-      default: [],
     },
   },
   { timestamps: true }

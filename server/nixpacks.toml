@@ -29,7 +29,24 @@ nixPkgs = ["bun", "nodejs_20"]
 [phases.install]
 cmds = ["bun install --frozen-lockfile"]
 
-# No build phase: Bun executes TypeScript natively at runtime.
+# Build phase explicitly EMPTY — a comment is not enough.
+#
+# Nixpacks auto-detects a `build` script in package.json and runs it unless a
+# build phase is declared. That is what broke this deploy:
+#
+#   bun build src/index.ts --outdir dist --target bun --minify
+#   error: Could not resolve "@firebase/app"
+#     at node_modules/@firebase/database-compat/dist/index.standalone.js:15
+#
+# firebase-admin ships prebuilt standalone bundles that `require()` sibling
+# @firebase/* packages at runtime; re-bundling them with `--target bun` cannot
+# resolve those, and bundling buys nothing here because Bun executes TypeScript
+# natively. The Dockerfile copies `src/` and runs `bun run start` for the same
+# reason — this keeps both deploy paths on the identical artifact.
+#
+# The `build` script has been removed from package.json so this cannot regress.
+[phases.build]
+cmds = []
 
 [start]
 cmd = "bun run start"

@@ -8,14 +8,20 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "NODE_ENV=production bun src/index.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun --minify --sourcemap",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "clean": "rm -rf dist node_modules/.cache"
+    "clean": "rm -rf node_modules/.cache"
   },
-  "keywords": ["music", "gig", "marketplace", "bun", "elysia", "api"],
+  "keywords": [
+    "music",
+    "gig",
+    "marketplace",
+    "bun",
+    "elysia",
+    "api"
+  ],
   "author": "ZTS Music Platform",
   "license": "MIT",
   "devDependencies": {

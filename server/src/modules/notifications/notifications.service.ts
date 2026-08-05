@@ -11,7 +11,7 @@ const TITLE_MAX = 200;
 const MESSAGE_MAX = 1000;
 
 /** Clamp to `n` chars, ellipsing when it had to cut. */
-export const truncate = (s: string, n: number): string =>
+const truncate = (s: string, n: number): string =>
   s.length <= n ? s : `${s.slice(0, n - 1).trimEnd()}…`;
 
 export interface NotifyInput {

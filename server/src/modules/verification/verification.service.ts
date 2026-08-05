@@ -404,9 +404,15 @@ export class VerificationService {
 
   /**
    * Reject verification section (Admin)
+   *
+   * `_adminId` is unused: unlike approval (which stamps `verifiedBy`), the
+   * verification schemas have no `rejectedBy` field, so there is nowhere to
+   * record the acting admin. Kept in the signature to mirror
+   * `approveVerification` and because the route already passes it — add a
+   * `rejectedBy` field to the models if attribution is ever needed.
    */
   async rejectVerification(
-    adminId: string,
+    _adminId: string,
     dto: AdminRejectVerificationDto
   ): Promise<VerificationStatusResponse> {
     // Try organizer first

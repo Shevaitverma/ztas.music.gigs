@@ -74,7 +74,7 @@ function zoneOffsetMs(instant: number): number {
  * The absolute instant of a wall-clock date/time in APP_TIMEZONE.
  * Out-of-range components roll over (day 32 -> next month), same as Date.UTC.
  */
-export function zonedWallClock(
+function zonedWallClock(
   year: number,
   month: number,
   day: number,

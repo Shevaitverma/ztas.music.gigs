@@ -133,27 +133,27 @@
 <div class="wrap">
   <header class="masthead">
     <p class="eyebrow">Status report · ZTS Music Gigs · 4 Aug 2026</p>
-    <h1>The plumbing got fixed. The product still stops at the handshake.</h1>
+    <h1>The journey now reaches the end. The cash register still isn't installed.</h1>
     <p class="standfirst">
-      A full audit, then a repair pass, then a Go migration that was planned, stress-tested and
-      correctly abandoned. Security and correctness are meaningfully better than this morning.
-      The thing that actually blocks revenue has not moved — because it was never a code-quality problem.
+      A full audit, a repair pass, a Go migration planned and correctly abandoned, and then the
+      missing half of the product built: check-in, reviews, notifications and analytics.
+      A booking can now be completed end to end for the first time. Money still moves off-platform.
     </p>
     <div class="byline">
       <span>4 apps · ~37k LOC</span>
-      <span>audit + 15 agents</span>
+      <span>audit + 22 agents</span>
       <span>staying on TypeScript &amp; Bun</span>
-      <span>all four apps typecheck clean</span>
+      <span>68 tests · all four apps build</span>
     </div>
   </header>
 
   <dl class="board">
+    <div class="cell"><dt>Tests</dt><dd class="good">68<small>was 21 · all passing</small></dd></div>
     <div class="cell"><dt>Dependency vulns</dt><dd class="good">1<small>was 42 · 4 critical</small></dd></div>
-    <div class="cell"><dt>Tests</dt><dd class="good">35<small>was 21 · all passing</small></dd></div>
-    <div class="cell"><dt>Dead code cut</dt><dd class="good">1,162<small>lines · 22 files</small></dd></div>
-    <div class="cell"><dt>CI</dt><dd class="good">on<small>was none</small></dd></div>
+    <div class="cell"><dt>Booking completable</dt><dd class="good">yes<small>was impossible</small></dd></div>
+    <div class="cell"><dt>Analytics</dt><dd class="good">live<small>was none at all</small></dd></div>
     <div class="cell"><dt>Revenue possible</dt><dd class="bad">₹0<small>unchanged</small></dd></div>
-    <div class="cell"><dt>Overall score</dt><dd class="mid">4.6<small>was 3.9 / 10</small></dd></div>
+    <div class="cell"><dt>Overall score</dt><dd class="mid">5.4<small>was 3.9 / 10</small></dd></div>
   </dl>
 
   <h2>What moved today</h2>
@@ -175,9 +175,15 @@
     <div class="row"><span class="tag t-new">Found</span><span class="what"><b>Every bank IFSC code ever collected is destroyed</b><span>A database setting uppercased the encrypted value after encryption. Base64 is case-sensitive, so the data is unrecoverable — and it failed silently for months. Root cause fixed; the existing codes must be re-collected from users.</span></span></div>
     <div class="row"><span class="tag t-new">Found</span><span class="what"><b>The rate limiter has never run — not once</b><span>A framework scoping rule meant it never executed for any real route. Login brute-force protection has been decorative. Deliberately not switched on yet: doing so blind would brown out the API.</span></span></div>
 
-    <div class="row"><span class="tag t-open">Open</span><span class="what"><b>No payment, escrow, commission or payout code exists</b><span>Still the single thing between this and revenue.</span></span></div>
-    <div class="row"><span class="tag t-open">Open</span><span class="what"><b>Nobody is ever notified of anything</b><span>No email, SMS, push or WhatsApp. “You've been outbid” is the entire auction loop and it never leaves the database.</span></span></div>
-    <div class="row"><span class="tag t-open">Open</span><span class="what"><b>Check-in and reviews have no user interface</b><span>The backend is built and tested. No user can reach it, so no gig can complete and no review can exist.</span></span></div>
+    <div class="row"><span class="tag t-fixed">Built</span><span class="what"><b>Check-in and reviews now exist and work</b><span>OTP generation, GPS-verified check-in, two-party event confirmation and reviews from both sides. The backend was already built and tested — nobody could reach it. Now they can.</span></span></div>
+    <div class="row"><span class="tag t-fixed">Built</span><span class="what"><b>Notifications are created and emailed</b><span>Six domain events had no record at all, not just no delivery. Bid placed, outbid, accepted, rejected, booked, check-in ready.</span></span></div>
+    <div class="row"><span class="tag t-fixed">Built</span><span class="what"><b>Product analytics, with a strict privacy guard</b><span>The funnel is instrumented end to end. Names, emails, ID numbers and exact amounts are rejected before they can be sent — the check fails loudly in development.</span></span></div>
+
+    <div class="row"><span class="tag t-new">Found</span><span class="what"><b>A whole class of timezone bugs, one of them destructive</b><span>Event dates were stored as UTC midnight but compared against server-local time. The worst effect: gigs happening <em>that evening</em> were auto-closed at 05:30 in the morning and every pending bid rejected. Eight other places had the same flaw — reminders firing at 3:30am, today's gigs vanishing from search, bidding closing early.</span></span></div>
+
+    <div class="row"><span class="tag t-open">Open</span><span class="what"><b>No payment, escrow, commission or payout code exists</b><span>Deliberately out of the beta. Still the single thing between this and revenue.</span></span></div>
+    <div class="row"><span class="tag t-open">Open</span><span class="what"><b>Email sending and rate limiting are both switched off</b><span>One environment variable each. Until they're set, notifications are written but never sent, and login brute-force protection counts attempts without blocking any.</span></span></div>
+    <div class="row"><span class="tag t-open">Open</span><span class="what"><b>The privacy policy says you don't collect KYC. You do.</b><span>Aadhaar, PAN, GST and bank details are being collected under a notice saying that feature isn't live yet. A text edit, and the only item here with statutory exposure.</span></span></div>
   </div>
 </div>
 
@@ -198,16 +204,18 @@
         <rect x="300" y="24" width="112" height="42" class="box-live"/>
         <text x="356" y="42" class="svg-label" text-anchor="middle">Accept bid</text>
         <text x="356" y="56" class="svg-sub" text-anchor="middle">works</text>
-        <path class="flow-dead" d="M412 45 H 452"/>
-        <rect x="452" y="24" width="150" height="42" class="box-crit"/>
-        <text x="527" y="41" class="svg-label" text-anchor="middle" style="fill:var(--critical)">DEAD END</text>
-        <text x="527" y="55" class="svg-sub" text-anchor="middle">“payment coming soon”</text>
-        <rect x="632" y="24" width="120" height="42" class="box-dead"/>
-        <text x="692" y="42" class="svg-label" text-anchor="middle" style="fill:var(--dead)">Check in</text>
-        <text x="692" y="56" class="svg-sub" text-anchor="middle">built, no UI</text>
-        <rect x="772" y="24" width="128" height="42" class="box-dead"/>
-        <text x="836" y="42" class="svg-label" text-anchor="middle" style="fill:var(--dead)">Review</text>
-        <text x="836" y="56" class="svg-sub" text-anchor="middle">built, no UI</text>
+        <path class="flow" d="M412 45 H 452"/><path class="flow" d="M444 40 l8 5 -8 5"/>
+        <rect x="452" y="24" width="150" height="42" class="box-fixed"/>
+        <text x="527" y="41" class="svg-label" text-anchor="middle" style="fill:var(--ok)">Manage event</text>
+        <text x="527" y="55" class="svg-sub" text-anchor="middle">generate OTP · start</text>
+        <path class="flow" d="M602 45 H 632"/><path class="flow" d="M624 40 l8 5 -8 5"/>
+        <rect x="632" y="24" width="120" height="42" class="box-fixed"/>
+        <text x="692" y="42" class="svg-label" text-anchor="middle" style="fill:var(--ok)">Confirm ended</text>
+        <text x="692" y="56" class="svg-sub" text-anchor="middle">both parties</text>
+        <path class="flow" d="M752 45 H 772"/><path class="flow" d="M764 40 l8 5 -8 5"/>
+        <rect x="772" y="24" width="128" height="42" class="box-fixed"/>
+        <text x="836" y="42" class="svg-label" text-anchor="middle" style="fill:var(--ok)">Review</text>
+        <text x="836" y="56" class="svg-sub" text-anchor="middle">works</text>
 
         <text x="0" y="118" class="svg-head">ARTIST</text>
         <rect x="0" y="130" width="112" height="42" class="box-live"/>
@@ -222,24 +230,30 @@
         <text x="356" y="148" class="svg-label" text-anchor="middle">Bid accepted</text>
         <text x="356" y="162" class="svg-sub" text-anchor="middle">never told</text>
         <path class="flow" d="M412 151 H 452"/><path class="flow" d="M444 146 l8 5 -8 5"/>
-        <rect x="452" y="130" width="150" height="42" class="box-crit"/>
-        <text x="527" y="147" class="svg-label" text-anchor="middle" style="fill:var(--critical)">No way to contact</text>
-        <text x="527" y="161" class="svg-sub" text-anchor="middle">no messaging exists</text>
-        <path class="flow" d="M602 151 H 640"/><path class="flow" d="M632 146 l8 5 -8 5"/>
-        <rect x="640" y="130" width="260" height="42" class="box-dead"/>
-        <text x="770" y="148" class="svg-label" text-anchor="middle" style="fill:var(--dead)">Closes the deal on WhatsApp</text>
-        <text x="770" y="162" class="svg-sub" text-anchor="middle">platform earns nothing</text>
+        <path class="flow" d="M412 151 H 452"/><path class="flow" d="M444 146 l8 5 -8 5"/>
+        <rect x="452" y="130" width="150" height="42" class="box-fixed"/>
+        <text x="527" y="147" class="svg-label" text-anchor="middle" style="fill:var(--ok)">Check in at venue</text>
+        <text x="527" y="161" class="svg-sub" text-anchor="middle">OTP + GPS</text>
+        <path class="flow" d="M602 151 H 632"/><path class="flow" d="M624 146 l8 5 -8 5"/>
+        <rect x="632" y="130" width="120" height="42" class="box-fixed"/>
+        <text x="692" y="148" class="svg-label" text-anchor="middle" style="fill:var(--ok)">Confirm ended</text>
+        <text x="692" y="162" class="svg-sub" text-anchor="middle">both parties</text>
+        <path class="flow" d="M752 151 H 772"/><path class="flow" d="M764 146 l8 5 -8 5"/>
+        <rect x="772" y="130" width="128" height="42" class="box-fixed"/>
+        <text x="836" y="148" class="svg-label" text-anchor="middle" style="fill:var(--ok)">Review</text>
+        <text x="836" y="162" class="svg-sub" text-anchor="middle">works</text>
 
         <line x1="0" y1="205" x2="900" y2="205" stroke="var(--hairline)"/>
-        <text x="0" y="228" class="svg-sub">Solid = works · Dashed = code exists, unreachable · Red = where the product ends</text>
+        <text x="0" y="228" class="svg-sub">Green = built today · Solid outline = worked already · Payment still happens off-platform, by design</text>
       </svg>
     </div>
     <figcaption>
-      <strong>Figure 1 — now being fixed.</strong> The check-in and review screens under construction
-      turn the two dashed boxes solid. <em>Correction:</em> an earlier version of this page said the artist
-      is handed the client's phone number. That was wrong — the server fetches those fields but discards
-      them before responding, so they never reached the screen. The disintermediation risk is real, but it
-      comes from there being no messaging and no reason to return, not from the app leaking contacts.
+      <strong>Figure 1 — the dead end is gone.</strong> Every box was dashed or red this morning; the
+      journey now completes on both sides. What remains off-platform is payment, and that is a deliberate
+      beta scope decision rather than a gap.
+      <em>Correction retained:</em> an earlier version of this page said the artist is handed the client's
+      phone number. That was wrong — the server fetched those fields but discarded them before responding,
+      so they never reached the screen.
     </figcaption>
   </figure>
 </div>
@@ -287,9 +301,9 @@
         <text x="231" y="48" class="svg-label" text-anchor="middle" style="fill:var(--dead)">Deposit held</text>
         <text x="231" y="63" class="svg-sub" text-anchor="middle">not built</text>
         <path class="flow-dead" d="M294 52 H 336"/>
-        <rect x="336" y="26" width="126" height="52" class="box-dead"/>
-        <text x="399" y="48" class="svg-label" text-anchor="middle" style="fill:var(--dead)">OTP check-in</text>
-        <text x="399" y="63" class="svg-sub" text-anchor="middle">built, no UI</text>
+        <rect x="336" y="26" width="126" height="52" class="box-fixed"/>
+        <text x="399" y="48" class="svg-label" text-anchor="middle" style="fill:var(--ok)">OTP check-in</text>
+        <text x="399" y="63" class="svg-sub" text-anchor="middle">built today ✓</text>
         <path class="flow-dead" d="M462 52 H 504"/>
         <rect x="504" y="26" width="126" height="52" class="box-dead"/>
         <text x="567" y="48" class="svg-label" text-anchor="middle" style="fill:var(--dead)">Release funds</text>
@@ -299,13 +313,14 @@
         <text x="786" y="44" class="svg-label" text-anchor="middle" style="fill:var(--dead)">Keep ~12% commission</text>
         <text x="786" y="58" class="svg-sub" text-anchor="middle">not built</text>
         <text x="786" y="71" class="svg-sub" text-anchor="middle">→ ₹3,000 revenue per booking</text>
-        <text x="0" y="118" class="svg-sub">Only the first box exists. Everything right of it is why revenue is ₹0.</text>
-        <text x="0" y="136" class="svg-sub">The check-in step is built and tested — it just has no screen, so nobody can use it.</text>
+        <text x="0" y="118" class="svg-sub">The check-in trigger now works. The three money boxes around it do not exist.</text>
+        <text x="0" y="136" class="svg-sub">That is a deliberate beta decision — validate that bookings happen before charging for them.</text>
       </svg>
     </div>
     <figcaption>
-      <strong>Figure 2.</strong> Wiring the check-in screen is ~3 weeks and converts already-paid-for,
-      already-tested backend code into the one thing competitors don't have.
+      <strong>Figure 2.</strong> The release trigger is now real: two parties confirming an event at a
+      verified location. That is the part competitors don't have, and it is the hard part.
+      Attaching money to it is ordinary payment-gateway work.
     </figcaption>
   </figure>
 </div>
@@ -316,27 +331,28 @@
   <div class="bars">
     <div class="bar-row"><span class="bar-name">Market opportunity</span><span class="bar-track"><span class="bar-fill" style="width:70%;background:var(--ok)"></span></span><span class="bar-val">7</span></div>
     <div class="bar-row"><span class="bar-name">Security</span><span class="bar-track"><span class="bar-fill" style="width:70%;background:var(--ok)"></span></span><span class="bar-val"><span class="up">▲</span> 7</span></div>
-    <div class="bar-row"><span class="bar-name">Engineering</span><span class="bar-track"><span class="bar-fill" style="width:70%;background:var(--ok)"></span></span><span class="bar-val"><span class="up">▲</span> 7</span></div>
+    <div class="bar-row"><span class="bar-name">Engineering</span><span class="bar-track"><span class="bar-fill" style="width:80%;background:var(--ok)"></span></span><span class="bar-val"><span class="up">▲</span> 8</span></div>
     <div class="bar-row"><span class="bar-name">Architecture</span><span class="bar-track"><span class="bar-fill" style="width:60%;background:var(--ok)"></span></span><span class="bar-val">6</span></div>
     <div class="bar-row"><span class="bar-name">Problem strength</span><span class="bar-track"><span class="bar-fill" style="width:60%;background:var(--ok)"></span></span><span class="bar-val">6</span></div>
     <div class="bar-row"><span class="bar-name">Business potential</span><span class="bar-track"><span class="bar-fill" style="width:50%;background:var(--warn)"></span></span><span class="bar-val">5</span></div>
     <div class="bar-row"><span class="bar-name">Execution readiness</span><span class="bar-track"><span class="bar-fill" style="width:60%;background:var(--ok)"></span></span><span class="bar-val"><span class="up">▲</span> 6</span></div>
-    <div class="bar-row"><span class="bar-name">Product quality</span><span class="bar-track"><span class="bar-fill" style="width:40%;background:var(--warn)"></span></span><span class="bar-val"><span class="up">▲</span> 4</span></div>
-    <div class="bar-row"><span class="bar-name">User experience</span><span class="bar-track"><span class="bar-fill" style="width:40%;background:var(--warn)"></span></span><span class="bar-val"><span class="up">▲</span> 4</span></div>
+    <div class="bar-row"><span class="bar-name">Product quality</span><span class="bar-track"><span class="bar-fill" style="width:60%;background:var(--ok)"></span></span><span class="bar-val"><span class="up">▲</span> 6</span></div>
+    <div class="bar-row"><span class="bar-name">User experience</span><span class="bar-track"><span class="bar-fill" style="width:60%;background:var(--ok)"></span></span><span class="bar-val"><span class="up">▲</span> 6</span></div>
     <div class="bar-row"><span class="bar-name">Scalability</span><span class="bar-track"><span class="bar-fill" style="width:40%;background:var(--warn)"></span></span><span class="bar-val">4</span></div>
     <div class="bar-row"><span class="bar-name">Growth potential</span><span class="bar-track"><span class="bar-fill" style="width:40%;background:var(--warn)"></span></span><span class="bar-val">4</span></div>
-    <div class="bar-row"><span class="bar-name">Competitive position</span><span class="bar-track"><span class="bar-fill" style="width:40%;background:var(--warn)"></span></span><span class="bar-val"><span class="up">▲</span> 4</span></div>
-    <div class="bar-row"><span class="bar-name">Investment readiness</span><span class="bar-track"><span class="bar-fill" style="width:30%;background:var(--critical)"></span></span><span class="bar-val">3</span></div>
-    <div class="bar-row"><span class="bar-name">Operations</span><span class="bar-track"><span class="bar-fill" style="width:30%;background:var(--critical)"></span></span><span class="bar-val"><span class="up">▲</span> 3</span></div>
-    <div class="bar-row"><span class="bar-name">Moat</span><span class="bar-track"><span class="bar-fill" style="width:30%;background:var(--critical)"></span></span><span class="bar-val"><span class="up">▲</span> 3</span></div>
+    <div class="bar-row"><span class="bar-name">Competitive position</span><span class="bar-track"><span class="bar-fill" style="width:50%;background:var(--warn)"></span></span><span class="bar-val"><span class="up">▲</span> 5</span></div>
+    <div class="bar-row"><span class="bar-name">Investment readiness</span><span class="bar-track"><span class="bar-fill" style="width:40%;background:var(--warn)"></span></span><span class="bar-val"><span class="up">▲</span> 4</span></div>
+    <div class="bar-row"><span class="bar-name">Operations</span><span class="bar-track"><span class="bar-fill" style="width:50%;background:var(--warn)"></span></span><span class="bar-val"><span class="up">▲</span> 5</span></div>
+    <div class="bar-row"><span class="bar-name">Moat</span><span class="bar-track"><span class="bar-fill" style="width:50%;background:var(--warn)"></span></span><span class="bar-val"><span class="up">▲</span> 5</span></div>
     <div class="bar-row"><span class="bar-name">Legal &amp; compliance</span><span class="bar-track"><span class="bar-fill" style="width:30%;background:var(--critical)"></span></span><span class="bar-val"><span class="up">▲</span> 3</span></div>
     <div class="bar-row"><span class="bar-name">Revenue model</span><span class="bar-track"><span class="bar-fill" style="width:20%;background:var(--critical)"></span></span><span class="bar-val">2</span></div>
   </div>
 
   <div class="callout warn">
-    <strong>Revenue model is still 2/10, and that's the whole story.</strong> Ten categories improved
-    today. The one that decides whether this is a business did not move, because it can only move by
-    building the payment layer — not by fixing bugs.
+    <strong>Revenue model is still 2/10, and that's the whole story.</strong> Thirteen categories
+    improved today. The one that decides whether this is a business did not move, and it can only move
+    by installing payments — which was deliberately deferred so you can first find out whether bookings
+    happen at all. That is the right order. It is also the reason none of this is revenue yet.
   </div>
 
   <h2>What to do next</h2>
@@ -344,24 +360,25 @@
 
   <div class="plan">
     <div class="phase">
-      <div class="phase-when">Now</div>
+      <div class="phase-when">This week</div>
       <div>
-        <h4>Find out if anyone wants this</h4>
+        <h4>Four things, none of them large</h4>
         <ul>
-          <li>Install analytics — you still cannot tell whether a single person used the app today</li>
-          <li>Recruit 25 artists and broker 5 bookings by hand, outside the product. No code, and it tests every assumption below</li>
-          <li>Re-collect the corrupted bank IFSC codes</li>
+          <li><strong>Set two environment variables</strong> — an email key, and the rate limiter to enforcing after a few days watching its logs. Until then notifications are written but never sent</li>
+          <li><strong>Correct the privacy policy.</strong> It says you don't collect KYC while you're collecting Aadhaar and bank details. A text edit, and the only item carrying legal exposure</li>
+          <li>Rehearse the full journey on a test account — post, bid, accept, check in, complete, review — and confirm an email and an analytics event fire at every step</li>
+          <li>Re-collect the corrupted bank IFSC codes from affected artists. That data is genuinely gone</li>
         </ul>
       </div>
     </div>
     <div class="phase">
       <div class="phase-when">30 days</div>
       <div>
-        <h4>Wire what you already own</h4>
+        <h4>Find out if anyone wants this</h4>
         <ul>
-          <li>Check-in and review screens — 3 weeks turns tested backend code into the actual moat</li>
-          <li>Start payment-gateway onboarding: entity, GST, bank. It's a 2–6 week external wait, so start it first</li>
-          <li>Turn the rate limiter on carefully — set trusted proxies, observe, tune, then enforce</li>
+          <li>Recruit 25 artists and broker 5 bookings by hand. No code, and it tests every assumption below</li>
+          <li>Start payment-gateway onboarding: entity, GST, bank. A 2–6 week external wait, so start it first</li>
+          <li>Watch the funnel. You can finally see where people drop out</li>
         </ul>
       </div>
     </div>
@@ -395,10 +412,19 @@
     <code>type</code>. The engineering is genuinely capable. Nothing had been clicked through by a person.
   </div>
 
+  <div class="callout warn">
+    <strong>And it happened again today, which is the real lesson.</strong> The check-in screens were
+    built, reviewed, and passed every type check and build — then an adversarial pass traced a real gig
+    through real time and found the artist could not open the page <em>on the day of their own event</em>.
+    A date stored as UTC midnight, compared against local time. Automated checks cannot catch this class
+    of bug, and neither can reading the code. Only walking the journey finds it. Do the rehearsal.
+  </div>
+
   <footer>
     Full detail: <code>reports/07-full-audit-2026-08-04.md</code> (29 sections, every claim carries a file and line reference) ·
-    <code>reports/08-go-migration-plan.md</code> (the plan and why it was declined).<br>
-    Findings were put through adversarial review; corrections to my own errors are recorded in both documents rather than edited away.<br>
-    Biggest limitation, unchanged: there is still no usage data. One week of real analytics would outweigh every inference here.
+    <code>reports/08-go-migration-plan.md</code> (the plan and why it was declined) ·
+    <code>reports/09-beta-readiness-plan.md</code> (what beta means and what was scoped out).<br>
+    Every implementation pass was checked by an independent adversarial agent; corrections to my own errors are recorded in the documents rather than edited away.<br>
+    Biggest limitation, now finally addressable: there was no usage data. Analytics shipped today — one week of it will outweigh every inference here.
   </footer>
 </div>

@@ -29,5 +29,3 @@ export const createReviewSchema = z.object({
     .max(2000, 'Please keep it under 2000 characters'),
   wouldRecommend: z.boolean(),
 })
-
-export type CreateReviewSchemaInput = z.infer<typeof createReviewSchema>

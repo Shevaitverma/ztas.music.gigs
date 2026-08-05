@@ -361,10 +361,6 @@ export interface UpdateBidInput {
   proposal?: string
 }
 
-export interface UpdateGigInput extends Partial<CreateGigInput> {
-  id?: string
-}
-
 export interface UpdateArtistProfileInput {
   stageName: string
   bio?: string

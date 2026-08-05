@@ -134,7 +134,6 @@ export function VerificationDetailCard({ data }: VerificationDetailCardProps) {
               <PiiField
                 label="Document number"
                 masked={data.identity.numberMasked}
-                userId={data.userId}
                 field="identity_number"
               />
               <DocumentLink label="ID document" url={data.identity.documentUrl} />
@@ -176,13 +175,11 @@ function OrganizerSections({ data }: { data: OrganizerVerification }) {
               <PiiField
                 label="PAN"
                 masked={data.business.panMasked}
-                userId={data.userId}
                 field="business_pan"
               />
               <PiiField
                 label="GST"
                 masked={data.business.gstMasked}
-                userId={data.userId}
                 field="business_gst"
               />
               <DocumentLink
@@ -253,13 +250,11 @@ function ArtistSections({ data }: { data: ArtistVerification }) {
               <PiiField
                 label="Account number"
                 masked={data.bankAccount.accountNumberMasked}
-                userId={data.userId}
                 field="bank_account"
               />
               <PiiField
                 label="IFSC"
                 masked={data.bankAccount.ifscMasked}
-                userId={data.userId}
                 field="bank_ifsc"
               />
               <DocumentLink

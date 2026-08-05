@@ -1,67 +1,11 @@
 import { z } from 'zod'
 
 /**
- * Server-side enums (mirrored from
- * `ai.zts.music.server/src/shared/enums/index.ts`). Kept as plain string
- * unions/zod enums so the admin UI does not need a runtime import from the
- * server package.
+ * Server-side resolution actions (mirrored from
+ * `ai.zts.music.server/src/shared/enums/index.ts`). The other report enums live
+ * in `lib/types.ts` as `AdminReport*` unions — this one is here because only
+ * `verdictToAction` below consumes it.
  */
-export const reportStatusValues = [
-  'PENDING',
-  'UNDER_REVIEW',
-  'NEEDS_INFO',
-  'INVESTIGATING',
-  'RESOLVED',
-  'DISMISSED',
-  'ESCALATED',
-] as const
-export type ReportStatus = (typeof reportStatusValues)[number]
-
-export const reportCategoryValues = [
-  'USER_BEHAVIOR',
-  'GIG_CONTENT',
-  'PAYMENT',
-  'PROFILE_CONTENT',
-  'SAFETY',
-  'SPAM',
-  'TECHNICAL',
-  'OTHER',
-] as const
-export type ReportCategory = (typeof reportCategoryValues)[number]
-
-export const reportTypeValues = [
-  'HARASSMENT',
-  'FRAUD',
-  'SCAM',
-  'IMPERSONATION',
-  'INAPPROPRIATE_CONTENT',
-  'ILLEGAL_CONTENT',
-  'NO_SHOW',
-  'LATE_ARRIVAL',
-  'UNPROFESSIONAL_BEHAVIOR',
-  'QUALITY_MISMATCH',
-  'FALSE_INFORMATION',
-  'PAYMENT_DISPUTE',
-  'SAFETY_CONCERN',
-  'COPYRIGHT',
-  'SPAM',
-  'BUG',
-  'OTHER',
-] as const
-export type ReportTypeValue = (typeof reportTypeValues)[number]
-
-export const reportPriorityValues = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const
-export type ReportPriority = (typeof reportPriorityValues)[number]
-
-export const reportEntityTypeValues = [
-  'USER',
-  'GIG',
-  'REVIEW',
-  'BID',
-  'APPLICATION',
-] as const
-export type ReportEntityType = (typeof reportEntityTypeValues)[number]
-
 export const reportResolutionActionValues = [
   'NO_ACTION',
   'WARNING',
@@ -93,15 +37,6 @@ export const resolveFormSchema = z.object({
     .max(2000, 'Notes must be at most 2000 characters'),
 })
 export type ResolveFormInput = z.infer<typeof resolveFormSchema>
-
-export const dismissFormSchema = z.object({
-  notes: z
-    .string()
-    .trim()
-    .min(10, 'Notes must be at least 10 characters')
-    .max(2000, 'Notes must be at most 2000 characters'),
-})
-export type DismissFormInput = z.infer<typeof dismissFormSchema>
 
 /** Map a UI verdict onto the server resolution action. */
 export function verdictToAction(verdict: ResolveVerdict): ReportResolutionAction {

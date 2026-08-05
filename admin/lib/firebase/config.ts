@@ -4,8 +4,6 @@ import { getFirebaseWebConfig } from './firebase-config'
 
 let app: FirebaseApp | null = null
 let auth: Auth | null = null
-let initializationError: string | null = null
-let isInitialized = false
 
 function getFirebaseOptions(): FirebaseOptions | null {
   return getFirebaseWebConfig()
@@ -15,23 +13,15 @@ export function getFirebaseApp(): FirebaseApp | null {
   if (typeof window === 'undefined') return null
 
   const firebaseOptions = getFirebaseOptions()
-  if (!firebaseOptions) {
-    initializationError =
-      'Firebase configuration is missing. Check NEXT_PUBLIC_FIREBASE_* env vars.'
-    isInitialized = true
-    return null
-  }
+  // No status surface here (unlike web/, which has getFirebaseStatus) — callers
+  // just null-check. Failures are logged by lib/firebase/init.ts.
+  if (!firebaseOptions) return null
 
   if (!app) {
     try {
       const apps = getApps()
       app = apps.length > 0 ? apps[0] : initializeApp(firebaseOptions)
-      isInitialized = true
-      initializationError = null
-    } catch (error) {
-      initializationError =
-        error instanceof Error ? error.message : 'Failed to initialize Firebase'
-      isInitialized = true
+    } catch {
       return null
     }
   }
@@ -45,9 +35,7 @@ export function getFirebaseAuth(): Auth | null {
     if (!firebaseApp) return null
     try {
       auth = getAuth(firebaseApp)
-    } catch (error) {
-      initializationError =
-        error instanceof Error ? error.message : 'Failed to initialize Firebase Auth'
+    } catch {
       return null
     }
   }

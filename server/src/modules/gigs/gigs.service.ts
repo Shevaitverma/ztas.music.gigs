@@ -16,7 +16,7 @@ import { currentEventDay, endOfEventDay, eventEndsAt } from '../../shared/utils/
  * BOOKED → COMPLETED is the canonical happy-path completion driven by the OTP
  * end-event flow.
  */
-const VALID_STATUS_TRANSITIONS: Record<GigStatus, GigStatus[]> = {
+export const VALID_STATUS_TRANSITIONS: Record<GigStatus, GigStatus[]> = {
   [GigStatus.DRAFT]: [GigStatus.LIVE, GigStatus.CANCELLED],
   [GigStatus.LIVE]: [GigStatus.BOOKED, GigStatus.CLOSED, GigStatus.CANCELLED],
   [GigStatus.BOOKED]: [GigStatus.CLOSED, GigStatus.COMPLETED, GigStatus.CANCELLED],

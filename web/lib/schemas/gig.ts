@@ -56,5 +56,3 @@ export const createGigSchema = z.object({
   eventTiming: eventTimingSchema,
   requirements: z.string().max(2000).optional(),
 })
-
-export type CreateGigSchemaInput = z.infer<typeof createGigSchema>

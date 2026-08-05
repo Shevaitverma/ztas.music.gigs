@@ -2,162 +2,81 @@
  * Gig Status Endpoints Integration Tests
  * Tests for publish, close, and cancel gig operations
  */
-import { describe, it, expect, beforeEach, afterEach, spyOn } from 'bun:test';
+import { describe, it, expect, afterEach, spyOn } from 'bun:test';
 import { Types } from 'mongoose';
-import { GigsService } from '../modules/gigs/gigs.service';
+import { GigsService, VALID_STATUS_TRANSITIONS } from '../modules/gigs/gigs.service';
 import { BidModel, GigModel } from '../db/models';
 import { GigStatus, UserRole } from '../shared/enums';
 import { NotFoundException } from '../plugins/error.plugin';
 
+/**
+ * These assert against the service's real VALID_STATUS_TRANSITIONS, not a
+ * copy. A local copy drifted from production (it was missing BOOKED -> COMPLETED,
+ * the OTP happy path) and every assertion still passed, which is the whole
+ * failure mode this file previously had.
+ */
 describe('GigsService - Status Transitions', () => {
-  let gigsService: GigsService;
-
-  beforeEach(() => {
-    gigsService = new GigsService();
-  });
-
   describe('publishGig', () => {
+    const restore: Array<{ mockRestore: () => void }> = [];
+    afterEach(() => restore.splice(0).forEach((s) => s.mockRestore()));
+
     it('should throw NotFoundException when gig not found', async () => {
-      try {
-        await expect(gigsService.publishGig('nonexistent-id', 'user-123')).rejects.toThrow(NotFoundException);
-      } catch (e) {
-        // Expected behavior - gig not found
-        expect(e).toBeInstanceOf(Error);
-      }
+      restore.push(
+        spyOn(GigModel, 'findById').mockReturnValue({ exec: async () => null } as any),
+      );
+
+      await expect(
+        new GigsService().publishGig(new Types.ObjectId().toString(), 'user-123'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should validate status transition from DRAFT to LIVE', () => {
-      // Test the valid transitions logic
-      const validTransitions: Record<GigStatus, GigStatus[]> = {
-        [GigStatus.DRAFT]: [GigStatus.LIVE, GigStatus.CANCELLED],
-        [GigStatus.LIVE]: [GigStatus.BOOKED, GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.BOOKED]: [GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.CLOSED]: [GigStatus.COMPLETED, GigStatus.CANCELLED],
-        [GigStatus.COMPLETED]: [],
-        [GigStatus.CANCELLED]: [],
-      };
-
-      expect(validTransitions[GigStatus.DRAFT]).toContain(GigStatus.LIVE);
-      expect(validTransitions[GigStatus.DRAFT]).not.toContain(GigStatus.CLOSED);
+      expect(VALID_STATUS_TRANSITIONS[GigStatus.DRAFT]).toContain(GigStatus.LIVE);
+      expect(VALID_STATUS_TRANSITIONS[GigStatus.DRAFT]).not.toContain(GigStatus.CLOSED);
     });
 
     it('should not allow publishing already LIVE gig', () => {
-      const validTransitions: Record<GigStatus, GigStatus[]> = {
-        [GigStatus.DRAFT]: [GigStatus.LIVE, GigStatus.CANCELLED],
-        [GigStatus.LIVE]: [GigStatus.BOOKED, GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.BOOKED]: [GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.CLOSED]: [GigStatus.COMPLETED, GigStatus.CANCELLED],
-        [GigStatus.COMPLETED]: [],
-        [GigStatus.CANCELLED]: [],
-      };
-
-      // LIVE gig cannot transition to LIVE again
-      expect(validTransitions[GigStatus.LIVE]).not.toContain(GigStatus.LIVE);
+      expect(VALID_STATUS_TRANSITIONS[GigStatus.LIVE]).not.toContain(GigStatus.LIVE);
     });
   });
 
   describe('closeGig', () => {
     it('should validate status transition from LIVE to CLOSED', () => {
-      const validTransitions: Record<GigStatus, GigStatus[]> = {
-        [GigStatus.DRAFT]: [GigStatus.LIVE, GigStatus.CANCELLED],
-        [GigStatus.LIVE]: [GigStatus.BOOKED, GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.BOOKED]: [GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.CLOSED]: [GigStatus.COMPLETED, GigStatus.CANCELLED],
-        [GigStatus.COMPLETED]: [],
-        [GigStatus.CANCELLED]: [],
-      };
-
-      expect(validTransitions[GigStatus.LIVE]).toContain(GigStatus.CLOSED);
-      expect(validTransitions[GigStatus.BOOKED]).toContain(GigStatus.CLOSED);
+      expect(VALID_STATUS_TRANSITIONS[GigStatus.LIVE]).toContain(GigStatus.CLOSED);
+      expect(VALID_STATUS_TRANSITIONS[GigStatus.BOOKED]).toContain(GigStatus.CLOSED);
     });
 
     it('should not allow closing DRAFT gig', () => {
-      const validTransitions: Record<GigStatus, GigStatus[]> = {
-        [GigStatus.DRAFT]: [GigStatus.LIVE, GigStatus.CANCELLED],
-        [GigStatus.LIVE]: [GigStatus.BOOKED, GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.BOOKED]: [GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.CLOSED]: [GigStatus.COMPLETED, GigStatus.CANCELLED],
-        [GigStatus.COMPLETED]: [],
-        [GigStatus.CANCELLED]: [],
-      };
-
-      expect(validTransitions[GigStatus.DRAFT]).not.toContain(GigStatus.CLOSED);
+      expect(VALID_STATUS_TRANSITIONS[GigStatus.DRAFT]).not.toContain(GigStatus.CLOSED);
     });
   });
 
   describe('cancelGig', () => {
     it('should validate status transition to CANCELLED from any non-terminal state', () => {
-      const validTransitions: Record<GigStatus, GigStatus[]> = {
-        [GigStatus.DRAFT]: [GigStatus.LIVE, GigStatus.CANCELLED],
-        [GigStatus.LIVE]: [GigStatus.BOOKED, GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.BOOKED]: [GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.CLOSED]: [GigStatus.COMPLETED, GigStatus.CANCELLED],
-        [GigStatus.COMPLETED]: [],
-        [GigStatus.CANCELLED]: [],
-      };
-
-      expect(validTransitions[GigStatus.DRAFT]).toContain(GigStatus.CANCELLED);
-      expect(validTransitions[GigStatus.LIVE]).toContain(GigStatus.CANCELLED);
-      expect(validTransitions[GigStatus.BOOKED]).toContain(GigStatus.CANCELLED);
-      expect(validTransitions[GigStatus.CLOSED]).toContain(GigStatus.CANCELLED);
+      for (const from of [GigStatus.DRAFT, GigStatus.LIVE, GigStatus.BOOKED, GigStatus.CLOSED]) {
+        expect(VALID_STATUS_TRANSITIONS[from]).toContain(GigStatus.CANCELLED);
+      }
     });
 
     it('should not allow cancelling already CANCELLED gig', () => {
-      const validTransitions: Record<GigStatus, GigStatus[]> = {
-        [GigStatus.DRAFT]: [GigStatus.LIVE, GigStatus.CANCELLED],
-        [GigStatus.LIVE]: [GigStatus.BOOKED, GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.BOOKED]: [GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.CLOSED]: [GigStatus.COMPLETED, GigStatus.CANCELLED],
-        [GigStatus.COMPLETED]: [],
-        [GigStatus.CANCELLED]: [],
-      };
-
-      expect(validTransitions[GigStatus.CANCELLED]).toEqual([]);
+      expect(VALID_STATUS_TRANSITIONS[GigStatus.CANCELLED]).toEqual([]);
     });
 
     it('should not allow cancelling COMPLETED gig', () => {
-      const validTransitions: Record<GigStatus, GigStatus[]> = {
-        [GigStatus.DRAFT]: [GigStatus.LIVE, GigStatus.CANCELLED],
-        [GigStatus.LIVE]: [GigStatus.BOOKED, GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.BOOKED]: [GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.CLOSED]: [GigStatus.COMPLETED, GigStatus.CANCELLED],
-        [GigStatus.COMPLETED]: [],
-        [GigStatus.CANCELLED]: [],
-      };
-
-      expect(validTransitions[GigStatus.COMPLETED]).toEqual([]);
+      expect(VALID_STATUS_TRANSITIONS[GigStatus.COMPLETED]).toEqual([]);
     });
   });
 
   describe('Status Transition Matrix', () => {
     it('should have all GigStatus values defined in transitions', () => {
-      const allStatuses = Object.values(GigStatus);
-      const validTransitions: Record<GigStatus, GigStatus[]> = {
-        [GigStatus.DRAFT]: [GigStatus.LIVE, GigStatus.CANCELLED],
-        [GigStatus.LIVE]: [GigStatus.BOOKED, GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.BOOKED]: [GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.CLOSED]: [GigStatus.COMPLETED, GigStatus.CANCELLED],
-        [GigStatus.COMPLETED]: [],
-        [GigStatus.CANCELLED]: [],
-      };
-
-      for (const status of allStatuses) {
-        expect(validTransitions[status]).toBeDefined();
+      for (const status of Object.values(GigStatus)) {
+        expect(VALID_STATUS_TRANSITIONS[status]).toBeDefined();
       }
     });
 
     it('should have COMPLETED and CANCELLED as terminal states', () => {
-      const validTransitions: Record<GigStatus, GigStatus[]> = {
-        [GigStatus.DRAFT]: [GigStatus.LIVE, GigStatus.CANCELLED],
-        [GigStatus.LIVE]: [GigStatus.BOOKED, GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.BOOKED]: [GigStatus.CLOSED, GigStatus.CANCELLED],
-        [GigStatus.CLOSED]: [GigStatus.COMPLETED, GigStatus.CANCELLED],
-        [GigStatus.COMPLETED]: [],
-        [GigStatus.CANCELLED]: [],
-      };
-
-      expect(validTransitions[GigStatus.COMPLETED].length).toBe(0);
-      expect(validTransitions[GigStatus.CANCELLED].length).toBe(0);
+      expect(VALID_STATUS_TRANSITIONS[GigStatus.COMPLETED].length).toBe(0);
+      expect(VALID_STATUS_TRANSITIONS[GigStatus.CANCELLED].length).toBe(0);
     });
   });
 });

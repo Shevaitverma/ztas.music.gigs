@@ -33,6 +33,7 @@ import { ReviewModal } from '@/components/review-modal'
 import { gigsApi, bidsApi, checkinApi, reviewsApi } from '@/lib/api'
 import { CHECKIN_LIVE_STATUSES } from '@/lib/api/checkin'
 import { capture } from '@/lib/analytics'
+import { otpUnlocksAt } from '@/lib/event-time'
 import { useAuth } from '@/lib/providers'
 import { formatEventDate, formatTime, formatDate } from '@/lib/utils'
 import toast from 'react-hot-toast'
@@ -194,13 +195,12 @@ export default function ManageEventPage() {
   // out — and every press is a guaranteed 400.
   // ponytail: no countdown timer, so the copy tells them the unlock time and a
   // refresh re-evaluates it. Add a tick if that ever feels slow.
-  const otpUnlocksAt = (() => {
-    const d = new Date(gig.eventTiming.date)
-    const [h, m] = gig.eventTiming.startTime.split(':').map(Number)
-    d.setHours(h, m, 0, 0)
-    return new Date(d.getTime() - 30 * 60 * 1000)
-  })()
-  const canGenerate = gig.status === 'BOOKED' && Date.now() >= otpUnlocksAt.getTime()
+  // Must match the server's gate (checkin.service.ts uses eventStartsAt from
+  // shared/utils/event-time.ts). Computing this with `setHours` would read the
+  // BROWSER's zone against a UTC-midnight date and disagree with the server by
+  // the offset — the same class of bug that was fixed across the backend.
+  const unlocksAt = otpUnlocksAt(gig.eventTiming)
+  const canGenerate = gig.status === 'BOOKED' && Date.now() >= unlocksAt.getTime()
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -293,7 +293,7 @@ export default function ManageEventPage() {
                   ? 'This gig is already marked completed, so a check-in code can no longer be issued.'
                   : canGenerate
                     ? `Generate a 6-digit code and read it out to ${artistName}. They enter it at the venue to check in.`
-                    : `Code generation unlocks 30 minutes before the start time — from ${formatDate(otpUnlocksAt.toISOString(), 'PPp')}. Come back then and read the code out to ${artistName}.`}
+                    : `Code generation unlocks 30 minutes before the start time — from ${formatDate(unlocksAt.toISOString(), 'PPp')}. Come back then and read the code out to ${artistName}.`}
               </p>
               <Button
                 variant="primary"

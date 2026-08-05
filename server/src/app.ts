@@ -4,7 +4,6 @@ import { bearer } from '@elysiajs/bearer';
 import { errorPlugin } from './plugins/error.plugin';
 import { loggingPlugin } from './plugins/logging.plugin';
 import { securityPlugin } from './plugins/security.plugin';
-import { compressionPlugin } from './plugins/compression.plugin';
 import { corsPlugin } from './plugins/cors.plugin';
 import { swaggerPlugin } from './plugins/swagger.plugin';
 import { config } from './config';
@@ -61,10 +60,11 @@ export function createApp() {
 		)
 
 		// 6. Bearer token extraction
+		//    Response compression is intentionally NOT done here — it belongs at
+		//    the reverse proxy. An app-level afterHandle would have to return a
+		//    raw `Response`, which skips each module's `transformPlugin` and so
+		//    drops the `{success,message,data}` envelope on large payloads.
 		.use(bearer())
-
-		// 7. Response compression (last in chain, before sending)
-		.use(compressionPlugin({ threshold: 1024 }))
 
 		// ===== JWT Configuration =====
 		.use(

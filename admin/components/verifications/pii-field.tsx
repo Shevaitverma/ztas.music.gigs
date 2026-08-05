@@ -9,8 +9,6 @@ interface PiiFieldProps {
   label: string
   /** The masked value (last-4 form), as returned by the server. May be undefined when not submitted. */
   masked?: string
-  /** Identifier of the user this field belongs to — used for the audit log entry. */
-  userId: string
   /** Audit-log key, e.g. "aadhaar", "pan", "bank_account". */
   field: string
 }
@@ -23,17 +21,16 @@ interface PiiFieldProps {
  * Each reveal click logs to the console with a structured tag so a future audit-trail
  * backend hook can pick it up.
  */
-export function PiiField({ label, masked, userId, field }: PiiFieldProps) {
+export function PiiField({ label, masked, field }: PiiFieldProps) {
   const [revealed, setRevealed] = useState(false)
 
   const handleReveal = () => {
     if (!revealed) {
       // TODO: wire to server-side audit-trail endpoint so reveals are logged
-      // against the acting admin with the raw userId server-side, not here.
-      // Until then we only emit a dev-only breadcrumb without the raw userId
-      // to avoid leaking PII into browser consoles / log shippers in prod.
+      // against the acting admin. The acting admin and the subject user are
+      // both resolved server-side from the session, so no ids are passed in
+      // here — this is only a dev breadcrumb naming the field.
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
         console.info('[admin-pii-reveal]', field)
       }
     }

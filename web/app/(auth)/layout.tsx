@@ -34,24 +34,25 @@ export default function AuthLayout({
           </h1>
 
           <p className="text-lg text-foreground-muted max-w-md">
-            Connect with thousands of talented artists or find amazing gigs.
-            Join the reverse-auction marketplace transforming the music industry.
+            Post a gig, compare real proposals from musicians, and book the act
+            that fits. Built in India, for Indian events.
           </p>
 
-          {/* Testimonial */}
+          {/*
+            No testimonial here. This carried a fabricated quote ("saved us 40%
+            on our wedding band" — Rahul Sharma, Event Organizer, Mumbai) and a
+            "thousands of talented artists" claim, on the first screen every user
+            sees, while the platform had no users at all. The landing site was
+            cleaned of the same thing; this copy lived in web/ and was missed.
+            Don't reintroduce social proof until it is real.
+          */}
           <div className="mt-12 p-6 rounded-2xl bg-surface-elevated/50 border border-white/5 max-w-md">
-            <p className="text-foreground-muted italic mb-4">
-              &ldquo;ZTS Music saved us 40% on our wedding band. The bidding system is brilliant!&rdquo;
+            <p className="text-sm font-medium text-foreground mb-2">Early access</p>
+            <p className="text-foreground-muted text-sm">
+              We&rsquo;re onboarding our first artists and organisers in Mumbai.
+              Payment is arranged directly between you and the artist for now —
+              escrow and OTP-verified check-in are rolling out during the beta.
             </p>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center text-white font-semibold text-sm">
-                RS
-              </div>
-              <div>
-                <p className="font-medium text-foreground text-sm">Rahul Sharma</p>
-                <p className="text-foreground-subtle text-xs">Event Organizer, Mumbai</p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
